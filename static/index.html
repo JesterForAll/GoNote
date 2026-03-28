@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренировка слуха</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 { color: #333; margin-bottom: 1.5rem; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .note-display {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            min-height: 30px;
+            color: #555;
+        }
+
+        .confirm-btn {
+            background-color: #28a745;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .confirm-btn:hover { background-color: #218838; }
+        
+        .confirm-btn.correct { background-color: #28a745 !important; color: white; }
+        .confirm-btn.wrong { background-color: #dc3545 !important; color: white; }
+
+        .status-message {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Тренировка слуха 🎹</h1>
+    
+    <div class="controls">
+        <button id="btnPrev" disabled>◀ Prev</button>
+        <button id="btnPlay">▶ Play</button>
+        <button id="btnNext" disabled>Next ▶</button>
+    </div>
+
+    <div id="noteDisplay" class="note-display">Загрузка...</div>
+
+    <button id="btnConfirm" class="confirm-btn">Подтвердить выбор</button>
+    
+    <div id="statusMessage" class="status-message"></div>
+</div>
+
+<script>
+    // Подключение к WebSocket серверу
+    const ws = new WebSocket('ws://' + window.location.host + '/ws');
+    
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnConfirm = document.getElementById('btnConfirm');
+    const noteDisplay = document.getElementById('noteDisplay');
+    const statusMessage = document.getElementById('statusMessage');
+
+    let currentNoteData = null; // Данные о текущей ноте от сервера
+
+    // Отправка запроса на получение случайной ноты
+    function requestNewNote() {
+        ws.send(JSON.stringify({ action: "new_note" }));
+        noteDisplay.textContent = 'Генерация ноты...';
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+        resetConfirmButton();
+        statusMessage.textContent = '';
+    }
+
+    // Кнопка Play - проигрывает аудиофайл, путь к которому пришел от сервера
+    btnPlay.addEventListener('click', () => {
+        if (currentNoteData && currentNoteData.audioUrl) {
+            const audio = new Audio(currentNoteData.audioUrl);
+            audio.play();
+            btnPlay.disabled = true;
+            
+            audio.onended = () => {
+                btnPlay.disabled = false;
+            };
+        }
+    });
+
+    // Кнопки Prev/Next просто запрашивают новую случайную ноту у сервера
+    btnPrev.addEventListener('click', requestNewNote);
+    btnNext.addEventListener('click', requestNewNote);
+
+    // Кнопка подтверждения - отправляет выбор пользователя на сервер
+    btnConfirm.addEventListener('click', () => {
+        if (!currentNoteData) return;
+
+        // Отправляем пустой объект или любой флаг, что пользователь подтвердил
+        // Сервер сам знает, какая нота сейчас активна
+        ws.send(JSON.stringify({ action: "confirm" }));
+        btnConfirm.disabled = true;
+    });
+
+    // Обработка сообщений от сервера
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        switch(data.type) {
+            case 'new_note':
+                currentNoteData = data.note;
+                noteDisplay.textContent = `Нота: ${data.note.name} (${data.note.octave})`;
+                btnPrev.disabled = false;
+                btnNext.disabled = false;
+                break;
+
+            case 'result':
+                if (data.correct) {
+                    btnConfirm.className = 'confirm-btn correct';
+                    statusMessage.textContent = 'Верно! 🎉';
+                } else {
+                    btnConfirm.className = 'confirm-btn wrong';
+                    statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}`;
+                }
+                
+                setTimeout(() => {
+                    resetConfirmButton();
+                }, 2000);
+                break;
+
+            case 'error':
+                statusMessage.textContent = data.message;
+                break;
+        }
+    };
+
+    ws.onclose = () => {
+        noteDisplay.textContent = 'Соединение потеряно';
+        btnPlay.disabled = true;
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+    };
+
+    function resetConfirmButton() {
+        btnConfirm.className = 'confirm-btn';
+        btnConfirm.disabled = false;
+    }
+
+    // Запрашиваем первую ноту при загрузке страницы
+    requestNewNote();
+</script>
+
+</body>
+</html>
