@@ -94,13 +94,13 @@
     </div>
 
     <div class="selection-area">
-        <select id="noteSelect">
-            <option value="" disabled selected>Нота</option>
+        <select id="octaveSelect">
+            <option value="" disabled selected>Октава</option>
             <!-- Опции будут загружены с сервера -->
         </select>
 
-        <select id="octaveSelect">
-            <option value="" disabled selected>Октава</option>
+        <select id="noteSelect">
+            <option value="" disabled selected>Нота</option>
             <!-- Опции будут загружены с сервера -->
         </select>
     </div>
@@ -111,7 +111,9 @@
 </div>
 
 <script>
-    let currentNoteData = null; // Текущая нота от сервера (для сравнения)
+    let currentNoteData = null;
+    let currentNoteUrl = null;
+    let currentOctaveData = null; // Текущая нота от сервера (для сравнения)
     let notesList = [];         // Список нот с сервера
     let octavesList = [];       // Список октав с сервера
     let currentIndex = 0;       // Индекс текущей ноты в списке
@@ -163,19 +165,19 @@
             
             const data = await response.json();
             
-            if (data.type === 'new_note') {
-                currentNoteData = data.note;
-                currentIndex = data.index || 0;
-                
-                // Сбрасываем выбор пользователя
-                noteSelect.value = "";
-                octaveSelect.value = "";
-                resetConfirmButton();
-                statusMessage.textContent = '';
-                
-                btnPrev.disabled = false;
-                btnNext.disabled = false;
-            }
+            currentNoteData = data.note;
+            currentOctaveData = data.octave;
+            currentIndex = data.index || 0;
+            currentNoteUrl = data.audioUrl;
+            
+            // Сбрасываем выбор пользователя
+            noteSelect.value = "";
+            octaveSelect.value = "";
+            resetConfirmButton();
+            statusMessage.textContent = '';
+            
+            btnPrev.disabled = false;
+            btnNext.disabled = false;
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка получения ноты';
@@ -215,14 +217,26 @@
 
     // 4. Кнопка Play - проигрывает аудио
     btnPlay.addEventListener('click', () => {
-        if (currentNoteData && currentNoteData.audioUrl) {
-            const audio = new Audio(currentNoteData.audioUrl);
+        console.log("Клик по Play");
+        
+        if  (currentNoteUrl) {
+            const audioPath = `/notes/${encodeURIComponent(currentNoteUrl)}`
+            console.log(audioPath)
+            
+        try{
+            const audio = new Audio(audioPath);
             audio.play();
             btnPlay.disabled = true;
             
             audio.onended = () => {
                 btnPlay.disabled = false;
             };
+        } catch{
+            console.error('Ошибка:', error);
+            statusMessage.textContent = 'Ошибка вопроизведения ноты';
+        }
+        } else {
+            console.log("currentNoteUrl не заполнен")
         }
     });
 
@@ -251,7 +265,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     note: selectedNote, 
-                    octave: parseInt(selectedOctave) 
+                    octave: selectedOctave,
+                    currentNote : currentNoteData,
+                    currentOctave: currentOctaveData 
                 })
             });
             
@@ -259,19 +275,20 @@
             
             const data = await response.json();
             
-            if (data.type === 'result') {
-                if (data.correct) {
-                    btnConfirm.className = 'confirm-btn correct';
-                    statusMessage.textContent = 'Верно! 🎉';
-                } else {
-                    btnConfirm.className = 'confirm-btn wrong';
-                    statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}`;
-                }
-                
-                setTimeout(() => {
-                    resetConfirmButton();
-                }, 2000);
+            // if (data.type === 'result') {
+            if (data.correct) {
+                btnConfirm.className = 'confirm-btn correct';
+                statusMessage.textContent = 'Верно! 🎉';
+            } else {
+                btnConfirm.className = 'confirm-btn wrong';
+                console.log("got data response: ", data)
+                statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}`;
             }
+            
+            setTimeout(() => {
+                resetConfirmButton();
+                }, 2000);
+            // }
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка проверки';
