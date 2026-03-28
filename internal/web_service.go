@@ -23,6 +23,10 @@ func CreateServer() *http.ServeMux {
 	serv := http.NewServeMux()
 
 	serv.Handle("/", getMainHandle())
+	serv.Handle("/api/confirm", nil)
+	serv.Handle("/api/availibleNotes", nil)
+	serv.Handle("/api/new-note", nil)
+	serv.Handle("/api/prev-note", nil)
 
 	return serv
 }

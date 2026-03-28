@@ -22,7 +22,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 400px;
+            max-width: 450px;
             width: 90%;
         }
 
@@ -48,12 +48,20 @@
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        .note-display {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 20px 0;
-            min-height: 30px;
-            color: #555;
+        .selection-area {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            min-width: 100px;
         }
 
         .confirm-btn {
@@ -85,7 +93,17 @@
         <button id="btnNext" disabled>Next ▶</button>
     </div>
 
-    <div id="noteDisplay" class="note-display">Загрузка...</div>
+    <div class="selection-area">
+        <select id="noteSelect">
+            <option value="" disabled selected>Нота</option>
+            <!-- Опции будут загружены с сервера -->
+        </select>
+
+        <select id="octaveSelect">
+            <option value="" disabled selected>Октава</option>
+            <!-- Опции будут загружены с сервера -->
+        </select>
+    </div>
 
     <button id="btnConfirm" class="confirm-btn">Подтвердить выбор</button>
     
@@ -93,29 +111,109 @@
 </div>
 
 <script>
-    // Подключение к WebSocket серверу
-    const ws = new WebSocket('ws://' + window.location.host + '/ws');
-    
+    let currentNoteData = null; // Текущая нота от сервера (для сравнения)
+    let notesList = [];         // Список нот с сервера
+    let octavesList = [];       // Список октав с сервера
+    let currentIndex = 0;       // Индекс текущей ноты в списке
+
     const btnPlay = document.getElementById('btnPlay');
     const btnPrev = document.getElementById('btnPrev');
     const btnNext = document.getElementById('btnNext');
     const btnConfirm = document.getElementById('btnConfirm');
-    const noteDisplay = document.getElementById('noteDisplay');
+    const noteSelect = document.getElementById('noteSelect');
+    const octaveSelect = document.getElementById('octaveSelect');
     const statusMessage = document.getElementById('statusMessage');
 
-    let currentNoteData = null; // Данные о текущей ноте от сервера
+    // 1. Загрузка списка доступных нот и октав при старте
+    async function loadOptions() {
+        try {
+            const response = await fetch('/api/availibleNotes');
+            if (!response.ok) throw new Error('Ошибка загрузки опций');
+            
+            const data = await response.json();
+            notesList = data.notes || [];
+            octavesList = data.octaves || [];
 
-    // Отправка запроса на получение случайной ноты
-    function requestNewNote() {
-        ws.send(JSON.stringify({ action: "new_note" }));
-        noteDisplay.textContent = 'Генерация ноты...';
-        btnPrev.disabled = true;
-        btnNext.disabled = true;
-        resetConfirmButton();
-        statusMessage.textContent = '';
+            // Заполняем выпадающие списки
+            notesList.forEach(note => {
+                const option = document.createElement('option');
+                option.value = note;
+                option.textContent = note;
+                noteSelect.appendChild(option);
+            });
+
+            octavesList.forEach(octave => {
+                const option = document.createElement('option');
+                option.value = octave;
+                option.textContent = octave;
+                octaveSelect.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error('Ошибка загрузки опций:', error);
+            statusMessage.textContent = 'Не удалось загрузить список нот';
+        }
     }
 
-    // Кнопка Play - проигрывает аудиофайл, путь к которому пришел от сервера
+    // 2. Запрос новой ноты (Next)
+    async function requestNewNote() {
+        try {
+            const response = await fetch('/api/new-note', { method: 'POST' });
+            if (!response.ok) throw new Error('Ошибка получения ноты');
+            
+            const data = await response.json();
+            
+            if (data.type === 'new_note') {
+                currentNoteData = data.note;
+                currentIndex = data.index || 0;
+                
+                // Сбрасываем выбор пользователя
+                noteSelect.value = "";
+                octaveSelect.value = "";
+                resetConfirmButton();
+                statusMessage.textContent = '';
+                
+                btnPrev.disabled = false;
+                btnNext.disabled = false;
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            statusMessage.textContent = 'Ошибка получения ноты';
+            btnPrev.disabled = true;
+            btnNext.disabled = true;
+        }
+    }
+
+    // 3. Запрос предыдущей ноты (Prev)
+    async function requestPrevNote() {
+        if (!currentNoteData || currentIndex <= 0) return;
+        
+        try {
+            const response = await fetch('/api/prev-note', { 
+                method: 'POST',
+                body: JSON.stringify({ index: currentIndex - 1 })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка получения предыдущей ноты');
+            
+            const data = await response.json();
+            
+            if (data.type === 'new_note') {
+                currentNoteData = data.note;
+                currentIndex = data.index;
+                
+                noteSelect.value = "";
+                octaveSelect.value = "";
+                resetConfirmButton();
+                statusMessage.textContent = '';
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            statusMessage.textContent = 'Ошибка загрузки предыдущей ноты';
+        }
+    }
+
+    // 4. Кнопка Play - проигрывает аудио
     btnPlay.addEventListener('click', () => {
         if (currentNoteData && currentNoteData.audioUrl) {
             const audio = new Audio(currentNoteData.audioUrl);
@@ -128,33 +226,40 @@
         }
     });
 
-    // Кнопки Prev/Next просто запрашивают новую случайную ноту у сервера
-    btnPrev.addEventListener('click', requestNewNote);
+    // Обработчики кнопок навигации
     btnNext.addEventListener('click', requestNewNote);
+    btnPrev.addEventListener('click', requestPrevNote);
 
-    // Кнопка подтверждения - отправляет выбор пользователя на сервер
-    btnConfirm.addEventListener('click', () => {
+    // 5. Кнопка подтверждения - отправляет выбор на сервер
+    btnConfirm.addEventListener('click', async () => {
         if (!currentNoteData) return;
 
-        // Отправляем пустой объект или любой флаг, что пользователь подтвердил
-        // Сервер сам знает, какая нота сейчас активна
-        ws.send(JSON.stringify({ action: "confirm" }));
+        const selectedNote = noteSelect.value;
+        const selectedOctave = octaveSelect.value;
+
+        if (!selectedNote || !selectedOctave) {
+            statusMessage.textContent = 'Пожалуйста, выберите ноту и октаву';
+            return;
+        }
+
         btnConfirm.disabled = true;
-    });
+        statusMessage.textContent = 'Проверка...';
 
-    // Обработка сообщений от сервера
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        switch(data.type) {
-            case 'new_note':
-                currentNoteData = data.note;
-                noteDisplay.textContent = `Нота: ${data.note.name} (${data.note.octave})`;
-                btnPrev.disabled = false;
-                btnNext.disabled = false;
-                break;
-
-            case 'result':
+        try {
+            const response = await fetch('/api/confirm', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    note: selectedNote, 
+                    octave: parseInt(selectedOctave) 
+                })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка сети');
+            
+            const data = await response.json();
+            
+            if (data.type === 'result') {
                 if (data.correct) {
                     btnConfirm.className = 'confirm-btn correct';
                     statusMessage.textContent = 'Верно! 🎉';
@@ -166,28 +271,23 @@
                 setTimeout(() => {
                     resetConfirmButton();
                 }, 2000);
-                break;
-
-            case 'error':
-                statusMessage.textContent = data.message;
-                break;
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            statusMessage.textContent = 'Ошибка проверки';
+            resetConfirmButton();
         }
-    };
-
-    ws.onclose = () => {
-        noteDisplay.textContent = 'Соединение потеряно';
-        btnPlay.disabled = true;
-        btnPrev.disabled = true;
-        btnNext.disabled = true;
-    };
+    });
 
     function resetConfirmButton() {
         btnConfirm.className = 'confirm-btn';
         btnConfirm.disabled = false;
     }
 
-    // Запрашиваем первую ноту при загрузке страницы
-    requestNewNote();
+    // Инициализация: загружаем опции и получаем первую ноту
+    loadOptions().then(() => {
+        requestNewNote();
+    });
 </script>
 
 </body>
