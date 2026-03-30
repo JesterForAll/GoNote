@@ -1,13 +1,23 @@
 package main
 
 import (
-	"GoNote/internal"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
+
+	"github.com/JesterForAll/GoNote/internal"
 )
 
 func main() {
-	serv := internal.CreateServer()
+	slogger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(slogger)
 
-	log.Fatal(http.ListenAndServe(":9090", serv))
+	serv := internal.NewServer(slogger)
+
+	err := http.ListenAndServe(":9090", serv)
+
+	if err != nil {
+		slog.Error("error while serving server", "error", fmt.Errorf("listen and serve: %w", err))
+	}
 }

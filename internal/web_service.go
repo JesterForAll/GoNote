@@ -2,7 +2,7 @@ package internal
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -34,14 +34,19 @@ type confirmRequest struct {
 	CurrentOctave string `json:"currentOctave"`
 }
 
-func getMainHandle() http.Handler {
-	data, err := os.ReadFile("../static/index.html")
-
-	if err != nil {
-		panic(err)
-	}
+func getMainHandle(logger *slog.Logger) http.Handler {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		data, err := os.ReadFile("../static/index.html")
+
+		if err != nil {
+			logger.Error("error reading main page", slog.Any("err", err))
+			http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.Write(data)
 	})
 
@@ -53,28 +58,34 @@ var ListNotes = availibleNotes{
 	Notes:   []string{"до, C", "до#, C#", "ре, D", "ре#, D#", "ми, E", "фа, F", "фа#, F#", "соль, G", "соль#, G#", "ля, A", "ля#, A#", "си, B"},
 }
 
-func getAvailibleNotes() http.Handler {
-
-	data, err := json.Marshal(ListNotes)
-
-	if err != nil {
-		panic(err)
-	}
+func getAvailibleNotes(logger *slog.Logger) http.Handler {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.Marshal(ListNotes)
+
+		if err != nil {
+			logger.Error("error encoding data", slog.Any("err", err))
+			http.Error(w, "Internal server error while encoding data", http.StatusInternalServerError)
+
+			return
+		}
+
 		w.Write(data)
 	})
 
 	return handler
 }
 
-func getNewNote() http.Handler {
+func getNewNote(logger *slog.Logger) http.Handler {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fileList, err := os.ReadDir("../assets")
 
 		if err != nil {
-			panic(err)
+			logger.Error("error getting data from disk", slog.Any("err", err))
+			http.Error(w, "Internal server error while getting data from disk", http.StatusInternalServerError)
+
+			return
 		}
 
 		newR := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -100,10 +111,13 @@ func getNewNote() http.Handler {
 		data, err := json.Marshal(NoteForSrv)
 
 		if err != nil {
-			panic(err)
+			logger.Error("error encoding response", slog.Any("err", err))
+			http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
+
+			return
 		}
 
-		log.Printf("Отправлен ответ: %s", string(data))
+		logger.Info("Отправлен ответ: \n", "data", data)
 
 		w.Write(data)
 	})
@@ -111,7 +125,7 @@ func getNewNote() http.Handler {
 	return handler
 }
 
-func getConfirm() http.Handler {
+func getConfirm(logger *slog.Logger) http.Handler {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		var confirmRequest confirmRequest
@@ -119,10 +133,13 @@ func getConfirm() http.Handler {
 		err := json.NewDecoder(r.Body).Decode(&confirmRequest)
 
 		if err != nil {
-			panic(err)
+			logger.Error("error decoding request", slog.Any("err", err))
+			http.Error(w, "Internal server error while decoding body", http.StatusInternalServerError)
+
+			return
 		}
 
-		log.Println("got input", confirmRequest)
+		logger.Info("got input\n", "confirmRequest", confirmRequest)
 
 		var confRes confirmResponse
 
@@ -136,10 +153,13 @@ func getConfirm() http.Handler {
 		data, err := json.Marshal(confRes)
 
 		if err != nil {
-			panic(err)
+			logger.Error("error encoding response", slog.Any("err", err))
+			http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
+
+			return
 		}
 
-		log.Printf("response %s\n", string(data))
+		logger.Info("response\n", "data", data)
 
 		w.Write(data)
 	})
@@ -147,15 +167,15 @@ func getConfirm() http.Handler {
 	return handler
 }
 
-func CreateServer() *http.ServeMux {
+func NewServer(logger *slog.Logger) *http.ServeMux {
 	serv := http.NewServeMux()
 
-	serv.Handle("/", getMainHandle())
-	serv.Handle("/api/availibleNotes", getAvailibleNotes())
-	serv.Handle("/api/confirm", getConfirm())
-	serv.Handle("/api/new-note", getNewNote())
+	serv.Handle("GET /", getMainHandle(logger))
+	serv.Handle("GET /api/availibleNotes", getAvailibleNotes(logger))
+	serv.Handle("POST /api/confirm", getConfirm(logger))
+	serv.Handle("GET /api/new-note", getNewNote(logger))
 	// serv.Handle("/api/prev-note", nil)
-	serv.Handle("/notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../assets"))))
+	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../assets"))))
 
 	return serv
 }

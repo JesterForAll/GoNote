@@ -129,7 +129,7 @@
     // 1. Загрузка списка доступных нот и октав при старте
     async function loadOptions() {
         try {
-            const response = await fetch('/api/availibleNotes');
+            const response = await fetch('/api/availibleNotes', { method: 'GET' });
             if (!response.ok) throw new Error('Ошибка загрузки опций');
             
             const data = await response.json();
@@ -160,7 +160,7 @@
     // 2. Запрос новой ноты (Next)
     async function requestNewNote() {
         try {
-            const response = await fetch('/api/new-note', { method: 'POST' });
+            const response = await fetch('/api/new-note', { method: 'GET' });
             if (!response.ok) throw new Error('Ошибка получения ноты');
             
             const data = await response.json();
@@ -192,7 +192,7 @@
         
         try {
             const response = await fetch('/api/prev-note', { 
-                method: 'POST',
+                method: 'GET',
                 body: JSON.stringify({ index: currentIndex - 1 })
             });
             
