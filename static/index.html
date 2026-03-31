@@ -278,11 +278,11 @@
             // if (data.type === 'result') {
             if (data.correct) {
                 btnConfirm.className = 'confirm-btn correct';
-                statusMessage.textContent = 'Верно! 🎉';
+                statusMessage.textContent = `Верно! 🎉. Точность - ${data.accuracy} %`;
             } else {
                 btnConfirm.className = 'confirm-btn wrong';
                 console.log("got data response: ", data)
-                statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}`;
+                statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}. Точность - ${data.accuracy} %`;
             }
             
             setTimeout(() => {

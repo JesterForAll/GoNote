@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type availibleNotes struct {
@@ -23,8 +26,9 @@ type note struct {
 }
 
 type confirmResponse struct {
-	Correct     bool   `json:"correct"`
-	CorrectNote string `json:"correctNote"`
+	Correct     bool    `json:"correct"`
+	CorrectNote string  `json:"correctNote"`
+	Accuracy    float32 `json:"accuracy"`
 }
 
 type confirmRequest struct {
@@ -37,6 +41,16 @@ type confirmRequest struct {
 type MainServ struct {
 	Serv   *http.ServeMux
 	Logger *slog.Logger
+	Db     *gorm.DB
+}
+
+type dbStruct struct {
+	gorm.Model
+	Note         string
+	Octave       string
+	NumTries     int
+	CorrectCount int
+	Accuracy     float32
 }
 
 var ListNotes = availibleNotes{
@@ -47,9 +61,17 @@ var ListNotes = availibleNotes{
 func NewServer(logger *slog.Logger) *MainServ {
 	serv := http.NewServeMux()
 
+	db, err := gorm.Open(sqlite.Open("../../static/accuracy.db"), &gorm.Config{})
+	if err != nil {
+		logger.Error("failed to connect database", slog.Any("err", err))
+	}
+
+	db.AutoMigrate(&dbStruct{})
+
 	mServ := &MainServ{
 		Serv:   serv,
 		Logger: logger,
+		Db:     db,
 	}
 
 	serv.HandleFunc("GET /", mServ.handleGetMain)
@@ -57,14 +79,14 @@ func NewServer(logger *slog.Logger) *MainServ {
 	serv.HandleFunc("POST /api/confirm", mServ.handlePostConfirm)
 	serv.HandleFunc("GET /api/new-note", mServ.handleGetNextNote)
 	// serv.Handle("/api/prev-note", nil)
-	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../assets"))))
+	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
 
 	return mServ
 }
 
 func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
 
-	data, err := os.ReadFile("../static/index.html")
+	data, err := os.ReadFile("../../static/index.html")
 
 	if err != nil {
 		mServ.Logger.Error("error reading main page", slog.Any("err", err))
@@ -94,7 +116,7 @@ func (mServ *MainServ) handleGetAvailibleNotes(w http.ResponseWriter, _ *http.Re
 
 func (mServ *MainServ) handleGetNextNote(w http.ResponseWriter, _ *http.Request) {
 
-	fileList, err := os.ReadDir("../assets")
+	fileList, err := os.ReadDir("../../assets")
 
 	if err != nil {
 		mServ.Logger.Error("error getting data from disk", slog.Any("err", err))
@@ -154,13 +176,30 @@ func (mServ *MainServ) handlePostConfirm(w http.ResponseWriter, r *http.Request)
 	mServ.Logger.Info("got input\n", "confirmRequest", confirmRequest)
 
 	var confRes confirmResponse
+	var noteData *dbStruct
+
+	res := mServ.Db.Where("Note = ? AND Octave = ?", confirmRequest.CurrentNote, confirmRequest.CurrentOctave).First(&noteData)
+
+	if res.RowsAffected == 0 {
+		noteData.Note = confirmRequest.CurrentNote
+		noteData.Octave = confirmRequest.CurrentOctave
+	}
 
 	if confirmRequest.CurrentNote == confirmRequest.Note && confirmRequest.CurrentOctave == confirmRequest.Octave {
 		confRes.Correct = true
+		noteData.CorrectCount++
 	} else {
 		confRes.Correct = false
 		confRes.CorrectNote = confirmRequest.CurrentOctave + ", " + confirmRequest.CurrentNote
 	}
+
+	noteData.NumTries++
+	noteData.Accuracy = float32(noteData.CorrectCount) / float32(noteData.NumTries) * 100.00
+
+	//update data in db
+	mServ.Db.Save(noteData)
+
+	confRes.Accuracy = noteData.Accuracy
 
 	data, err := json.Marshal(confRes)
 
