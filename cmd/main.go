@@ -18,6 +18,6 @@ func main() {
 	err := http.ListenAndServe(":9090", serv)
 
 	if err != nil {
-		slog.Error("error while serving server", "error", fmt.Errorf("listen and serve: %w", err))
+		slogger.Error("error while serving server", "error", fmt.Errorf("listen and serve: %w", err))
 	}
 }
