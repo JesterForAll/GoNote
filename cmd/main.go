@@ -13,9 +13,9 @@ func main() {
 	slogger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(slogger)
 
-	serv := internal.NewServer(slogger)
+	mServ := internal.NewServer(slogger)
 
-	err := http.ListenAndServe(":9090", serv)
+	err := http.ListenAndServe(":9090", mServ.Serv)
 
 	if err != nil {
 		slogger.Error("error while serving server", "error", fmt.Errorf("listen and serve: %w", err))
