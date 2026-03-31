@@ -52,7 +52,7 @@ func NewServer(logger *slog.Logger) *MainServ {
 		Logger: logger,
 	}
 
-	serv.HandleFunc("GET /", mServ.handleMain)
+	serv.HandleFunc("GET /", mServ.handleGetMain)
 	serv.HandleFunc("GET /api/availibleNotes", mServ.handleGetAvailibleNotes)
 	serv.HandleFunc("POST /api/confirm", mServ.handlePostConfirm)
 	serv.HandleFunc("GET /api/new-note", mServ.handleGetNextNote)
@@ -62,7 +62,7 @@ func NewServer(logger *slog.Logger) *MainServ {
 	return mServ
 }
 
-func (mServ *MainServ) handleMain(w http.ResponseWriter, _ *http.Request) {
+func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
 
 	data, err := os.ReadFile("../static/index.html")
 
