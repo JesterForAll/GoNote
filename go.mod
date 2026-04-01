@@ -1,4 +1,4 @@
-module github.com/JesterForAll/GoNote
+module github.com/JesterForAll/gonote
 
 go 1.26.1
 
