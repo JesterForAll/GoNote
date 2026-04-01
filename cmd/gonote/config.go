@@ -39,7 +39,7 @@ func ParseConfig() (*Config, error) {
 
 	cfg := DefaultConfig()
 
-	data, err := os.ReadFile("config.yaml")
+	data, err := os.ReadFile("../../config.yaml")
 	if err == nil {
 		var yamlCfg YamlStruct
 		if err := yaml.Unmarshal(data, &yamlCfg); err != nil {

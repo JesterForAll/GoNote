@@ -16,3 +16,5 @@
 # env
 *.env
 
+# visual studio debug
+__debug_bin*
