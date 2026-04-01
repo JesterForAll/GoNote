@@ -13,5 +13,6 @@
 # IDE
 .vscode/
 
-
+# env
+*.env
 
