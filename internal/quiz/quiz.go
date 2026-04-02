@@ -1,4 +1,4 @@
-package internal
+package quiz
 
 import (
 	"encoding/json"
@@ -9,8 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/JesterForAll/gonote/internal/database"
 )
 
 type availibleNotes struct {
@@ -38,73 +37,33 @@ type confirmRequest struct {
 	CurrentOctave string `json:"currentOctave"`
 }
 
-type MainServ struct {
-	Serv   *http.ServeMux
-	Logger *slog.Logger
-	Db     *gorm.DB
-}
-
-type dbStruct struct {
-	gorm.Model
-	Note         string
-	Octave       string
-	NumTries     int
-	CorrectCount int
-	Accuracy     float32
-}
-
 var ListNotes = availibleNotes{
 	Octaves: []string{"-4", "-3", "-2", "-1", "1", "2", "3", "4", "5"},
 	Notes:   []string{"до, C", "до#, C#", "ре, D", "ре#, D#", "ми, E", "фа, F", "фа#, F#", "соль, G", "соль#, G#", "ля, A", "ля#, A#", "си, B"},
 }
 
-func NewServer(logger *slog.Logger) *MainServ {
-	serv := http.NewServeMux()
+type Quiz struct {
+	Logger *slog.Logger
+	DB     *database.Database
+}
 
-	db, err := gorm.Open(sqlite.Open("../../static/accuracy.db"), &gorm.Config{})
+func New(logger *slog.Logger) (*Quiz, error) {
+
+	db, err := database.New("../../static/accuracy.db")
 	if err != nil {
 		logger.Error("failed to connect database", slog.Any("err", err))
+
+		return nil, err
 	}
 
-	db.AutoMigrate(&dbStruct{})
-
-	mServ := &MainServ{
-		Serv:   serv,
-		Logger: logger,
-		Db:     db,
-	}
-
-	serv.HandleFunc("GET /", mServ.handleGetMain)
-	serv.HandleFunc("GET /api/availibleNotes", mServ.handleGetAvailibleNotes)
-	serv.HandleFunc("POST /api/confirm", mServ.handlePostConfirm)
-	serv.HandleFunc("GET /api/new-note", mServ.handleGetNextNote)
-	// serv.Handle("/api/prev-note", nil)
-	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
-
-	return mServ
+	return &Quiz{Logger: logger, DB: db}, nil
 }
 
-func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
-
-	data, err := os.ReadFile("../../static/index.html")
-
-	if err != nil {
-		mServ.Logger.Error("error reading main page", slog.Any("err", err))
-		http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
-
-		return
-	}
-
-	w.Write(data)
-
-}
-
-func (mServ *MainServ) handleGetAvailibleNotes(w http.ResponseWriter, _ *http.Request) {
+func (quiz *Quiz) HandleGetAvailibleNotes(w http.ResponseWriter, _ *http.Request) {
 
 	data, err := json.Marshal(ListNotes)
-
 	if err != nil {
-		mServ.Logger.Error("error encoding data", slog.Any("err", err))
+		quiz.Logger.Error("error encoding data", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding data", http.StatusInternalServerError)
 
 		return
@@ -114,12 +73,11 @@ func (mServ *MainServ) handleGetAvailibleNotes(w http.ResponseWriter, _ *http.Re
 
 }
 
-func (mServ *MainServ) handleGetNextNote(w http.ResponseWriter, _ *http.Request) {
+func (quiz *Quiz) HandleGetNextNote(w http.ResponseWriter, _ *http.Request) {
 
 	fileList, err := os.ReadDir("../../assets")
-
 	if err != nil {
-		mServ.Logger.Error("error getting data from disk", slog.Any("err", err))
+		quiz.Logger.Error("error getting data from disk", slog.Any("err", err))
 		http.Error(w, "Internal server error while getting data from disk", http.StatusInternalServerError)
 
 		return
@@ -143,44 +101,42 @@ func (mServ *MainServ) handleGetNextNote(w http.ResponseWriter, _ *http.Request)
 		NoteForSrv.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
 	}
 
-	NoteForSrv.AudioUrl = randNote.Name() //"http://localhost:9090/notes/" +
+	NoteForSrv.AudioUrl = randNote.Name()
 
 	data, err := json.Marshal(NoteForSrv)
-
 	if err != nil {
-		mServ.Logger.Error("error encoding response", slog.Any("err", err))
+		quiz.Logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
 
 		return
 	}
 
-	mServ.Logger.Info("Отправлен ответ: \n", "data", data)
+	quiz.Logger.Info("Отправлен ответ: \n", "data", data)
 
 	w.Write(data)
 
 }
 
-func (mServ *MainServ) handlePostConfirm(w http.ResponseWriter, r *http.Request) {
+func (quiz *Quiz) HandlePostConfirm(w http.ResponseWriter, r *http.Request) {
 
 	var confirmRequest confirmRequest
 
 	err := json.NewDecoder(r.Body).Decode(&confirmRequest)
-
 	if err != nil {
-		mServ.Logger.Error("error decoding request", slog.Any("err", err))
+		quiz.Logger.Error("error decoding request", slog.Any("err", err))
 		http.Error(w, "Internal server error while decoding body", http.StatusInternalServerError)
 
 		return
 	}
 
-	mServ.Logger.Info("got input\n", "confirmRequest", confirmRequest)
+	quiz.Logger.Info("got input\n", "confirmRequest", confirmRequest)
 
 	var confRes confirmResponse
-	var noteData *dbStruct
+	var noteData database.DbStruct
 
-	res := mServ.Db.Where("Note = ? AND Octave = ?", confirmRequest.CurrentNote, confirmRequest.CurrentOctave).First(&noteData)
+	res := quiz.DB.Get(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
 
-	if res.RowsAffected == 0 {
+	if !res {
 		noteData.Note = confirmRequest.CurrentNote
 		noteData.Octave = confirmRequest.CurrentOctave
 	}
@@ -197,20 +153,19 @@ func (mServ *MainServ) handlePostConfirm(w http.ResponseWriter, r *http.Request)
 	noteData.Accuracy = float32(noteData.CorrectCount) / float32(noteData.NumTries) * 100.00
 
 	//update data in db
-	mServ.Db.Save(noteData)
+	quiz.DB.Save(&noteData)
 
 	confRes.Accuracy = noteData.Accuracy
 
 	data, err := json.Marshal(confRes)
-
 	if err != nil {
-		mServ.Logger.Error("error encoding response", slog.Any("err", err))
+		quiz.Logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
 
 		return
 	}
 
-	mServ.Logger.Info("response\n", "data", data)
+	quiz.Logger.Info("response\n", "data", data)
 
 	w.Write(data)
 
