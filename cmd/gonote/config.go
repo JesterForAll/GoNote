@@ -2,8 +2,8 @@ package main
 
 import (
 	"os"
-	"strconv"
 
+	"github.com/caarlos0/env"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
@@ -16,9 +16,13 @@ const (
 )
 
 type Config struct {
-	ScoreToWin int        `yaml:"score_to_win"`
-	Difficulty Difficulty `yaml:"difficulty"`
-	Port       int        `yaml:"default_port"`
+	ScoreToWin int
+	Difficulty Difficulty
+	Port       int
+}
+
+type envStruct struct {
+	Port int `env:"GONOTE_SERVER_PORT" envDefault:"9090"`
 }
 
 func DefaultConfig() *Config {
@@ -30,31 +34,41 @@ func DefaultConfig() *Config {
 }
 
 type YamlStruct struct {
-	ScoreToWin  int        `yaml:"score_to_win"`
-	Difficulty  Difficulty `yaml:"difficulty"`
-	DefaultPort int        `yaml:"default_port"`
+	ScoreToWin int        `yaml:"scoreToWin"`
+	Difficulty Difficulty `yaml:"difficulty"`
 }
 
 func ParseConfig() (*Config, error) {
 
 	cfg := DefaultConfig()
 
-	data, err := os.ReadFile("../../config.yaml")
-	if err == nil {
-		var yamlCfg YamlStruct
-		if err := yaml.Unmarshal(data, &yamlCfg); err != nil {
-			return nil, err
-		}
-		cfg.ScoreToWin = yamlCfg.ScoreToWin
-		cfg.Difficulty = yamlCfg.Difficulty
-		cfg.Port = yamlCfg.DefaultPort
-	}
-
 	_ = godotenv.Load()
 
-	if portStr := os.Getenv("PORT"); portStr != "" {
-		if port, err := strconv.Atoi(portStr); err == nil {
-			cfg.Port = port
+	envData := new(envStruct)
+
+	err := env.Parse(envData)
+	if err != nil {
+		return cfg, err
+	} else {
+		cfg.Port = envData.Port
+	}
+
+	data, err := os.ReadFile("../../config.yaml")
+	if err != nil {
+		return cfg, err
+	} else {
+		yamlCfg := new(YamlStruct)
+
+		if err := yaml.Unmarshal(data, yamlCfg); err != nil {
+			return nil, err
+		}
+
+		if yamlCfg.ScoreToWin != 0 {
+			cfg.ScoreToWin = yamlCfg.ScoreToWin
+		}
+
+		if yamlCfg.Difficulty != 0 {
+			cfg.Difficulty = yamlCfg.Difficulty
 		}
 	}
 

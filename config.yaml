@@ -1,3 +1,2 @@
-score_to_win: 10
+scoreToWin: 10
 difficulty: 2
-default_port: 9090
