@@ -19,5 +19,5 @@
 # visual studio debug
 __debug_bin*
 
-#databese
+#database
 *.db
