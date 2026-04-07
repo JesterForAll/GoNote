@@ -17,12 +17,12 @@ func main() {
 	mServ := server.New(slogger)
 
 	config, err := ParseConfig()
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			slogger.Info("config is not present, using default valuees for config", "config", *config)
-		} else {
-			slogger.Error("error while serving server", "error", fmt.Errorf("listen and serve: %w", err))
-		}
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		slogger.Info("config is not present, using default values for config", "config", *config)
+	case err != nil:
+		slogger.Error("error parsing config", "error", err)
+		os.Exit(1)
 	}
 
 	port := config.Port

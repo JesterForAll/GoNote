@@ -49,27 +49,26 @@ func ParseConfig() (*Config, error) {
 	err := env.Parse(envData)
 	if err != nil {
 		return cfg, err
-	} else {
-		cfg.Port = envData.Port
 	}
+
+	cfg.Port = envData.Port
 
 	data, err := os.ReadFile("../../config.yaml")
 	if err != nil {
 		return cfg, err
-	} else {
-		yamlCfg := new(YamlStruct)
+	}
 
-		if err := yaml.Unmarshal(data, yamlCfg); err != nil {
-			return nil, err
-		}
+	yamlCfg := new(YamlStruct)
+	if err := yaml.Unmarshal(data, yamlCfg); err != nil {
+		return nil, err
+	}
 
-		if yamlCfg.ScoreToWin != 0 {
-			cfg.ScoreToWin = yamlCfg.ScoreToWin
-		}
+	if yamlCfg.ScoreToWin != 0 {
+		cfg.ScoreToWin = yamlCfg.ScoreToWin
+	}
 
-		if yamlCfg.Difficulty != 0 {
-			cfg.Difficulty = yamlCfg.Difficulty
-		}
+	if yamlCfg.Difficulty != 0 {
+		cfg.Difficulty = yamlCfg.Difficulty
 	}
 
 	return cfg, nil
