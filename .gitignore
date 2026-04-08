@@ -13,5 +13,11 @@
 # IDE
 .vscode/
 
+# env
+*.env
 
+# visual studio debug
+__debug_bin*
 
+#database
+*.db
