@@ -29,7 +29,7 @@ func New(filePath string) (*Database, error) {
 	return &Database{DB: db}, nil
 }
 
-func (db *Database) Get(condition map[string]interface{}, result *DbStruct) bool {
+func (db *Database) CheckIfExist(condition map[string]interface{}, result *DbStruct) bool {
 	exist := false
 
 	answr := db.DB.Where(condition).Find(result)
@@ -43,6 +43,6 @@ func (db *Database) Get(condition map[string]interface{}, result *DbStruct) bool
 	return exist
 }
 
-func (db *Database) Save(data *DbStruct) {
+func (db *Database) Upsert(data *DbStruct) {
 	db.DB.Save(data)
 }

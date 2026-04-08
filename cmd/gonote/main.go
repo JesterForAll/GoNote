@@ -30,7 +30,7 @@ func main() {
 	slogger.Info("нужно набрать очков для победы", slog.Int("ScoreToWin", config.ScoreToWin))
 	slogger.Info("текущая сложность", "Difficulty", slog.Any("Difficulty", config.Difficulty))
 
-	err = http.ListenAndServe(fmt.Sprintf(":%v", port), mServ.Serv)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), mServ.Serv)
 	if err != nil {
 		slogger.Error("error while serving server", "error", slog.Any("listen and serve: %w", err))
 	}

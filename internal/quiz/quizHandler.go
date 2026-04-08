@@ -85,7 +85,7 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 	err := json.NewDecoder(r.Body).Decode(&confirmRequest)
 	if err != nil {
 		quizHand.Logger.Error("error decoding request", slog.Any("err", err))
-		http.Error(w, "Internal server error while decoding body", http.StatusInternalServerError)
+		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
 
 		return
 	}

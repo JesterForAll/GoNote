@@ -47,32 +47,32 @@ func (quiz *Quiz) getRandomNote() *note {
 	randNote := quiz.fileList[newR.Intn(len(quiz.fileList))]
 
 	// note name is in format "1-я октава (1), ре, D.wav"
-	var NoteForSrv note
+	var noteForSrv note
 
 	indxLead := strings.Index(randNote.Name(), "(")
 	indxEnd := strings.Index(randNote.Name(), ")")
 
 	if indxLead != -1 && indxEnd != -1 {
-		NoteForSrv.Octave = randNote.Name()[indxLead+1 : indxEnd]
+		noteForSrv.Octave = randNote.Name()[indxLead+1 : indxEnd]
 	}
 
 	indxDot := strings.Index(randNote.Name(), ".")
 	if indxDot != -1 {
-		NoteForSrv.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
+		noteForSrv.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
 	}
 
-	NoteForSrv.AudioUrl = randNote.Name()
+	noteForSrv.AudioUrl = randNote.Name()
 
-	return &NoteForSrv
+	return &noteForSrv
 }
 
 func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirmResponse {
 	var confRes confirmResponse
 	var noteData database.DbStruct
 
-	res := quiz.DB.Get(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
+	exist := quiz.DB.CheckIfExist(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
 
-	if !res {
+	if !exist {
 		noteData.Note = confirmRequest.CurrentNote
 		noteData.Octave = confirmRequest.CurrentOctave
 	}
@@ -89,8 +89,7 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirmRe
 	noteData.NumTries++
 	noteData.Accuracy = float32(noteData.CorrectCount) / float32(noteData.NumTries) * 100.00
 
-	//update data in db
-	quiz.DB.Save(&noteData)
+	quiz.DB.Upsert(&noteData)
 
 	confRes.Accuracy = noteData.Accuracy
 
