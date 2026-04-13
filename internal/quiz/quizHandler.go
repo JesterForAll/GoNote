@@ -34,6 +34,12 @@ type QuizHandler struct {
 	Quiz   *Quiz
 }
 
+type noteResponce struct {
+	Note     string `json:"note"`
+	Octave   string `json:"octave"`
+	AudioUrl string `json:"audioUrl"`
+}
+
 func New(logger *slog.Logger) (*QuizHandler, error) {
 
 	quiz, err := newQuiz(logger)
@@ -56,15 +62,20 @@ func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *h
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	w.Write(data)
 
 }
 
 func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Request) {
 
-	NoteForSrv := quizHand.Quiz.getRandomNote()
+	note := quizHand.Quiz.getRandomNote()
 
-	data, err := json.Marshal(NoteForSrv)
+	noteForSrv := noteResponce{Note: note.Note, Octave: note.Octave, AudioUrl: note.AudioUrl}
+
+	data, err := json.Marshal(noteForSrv)
 	if err != nil {
 		quizHand.Logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
@@ -73,6 +84,9 @@ func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Re
 	}
 
 	quizHand.Logger.Info("Отправлен ответ: \n", "data", data)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	w.Write(data)
 
@@ -92,7 +106,9 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 
 	quizHand.Logger.Info("got input\n", "confirmRequest", confirmRequest)
 
-	confRes := quizHand.Quiz.processConfirmation(&confirmRequest)
+	confirm := quizHand.Quiz.processConfirmation(&confirmRequest)
+
+	confRes := confirmResponse{Correct: confirm.Correct, CorrectNote: confirm.CorrectNote, Accuracy: confirm.Accuracy}
 
 	data, err := json.Marshal(confRes)
 	if err != nil {
@@ -103,6 +119,9 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 	}
 
 	quizHand.Logger.Info("response\n", "data", data)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	w.Write(data)
 

@@ -32,7 +32,6 @@ func New(logger *slog.Logger) *MainServ {
 	serv.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
 	serv.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
 	serv.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
-	// serv.Handle("/api/prev-note", nil)
 	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
 
 	return mServ
@@ -48,6 +47,9 @@ func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
 
 		return
 	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 
 	w.Write(data)
 

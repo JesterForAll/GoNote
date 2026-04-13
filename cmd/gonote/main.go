@@ -17,10 +17,11 @@ func main() {
 	mServ := server.New(slogger)
 
 	config, err := ParseConfig()
-	switch {
-	case errors.Is(err, os.ErrNotExist):
+	if err != nil && errors.Is(err, os.ErrNotExist) {
 		slogger.Info("config is not present, using default values for config", "config", *config)
-	case err != nil:
+	}
+
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		slogger.Error("error parsing config", "error", err)
 		os.Exit(1)
 	}

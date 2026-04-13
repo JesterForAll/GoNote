@@ -17,10 +17,15 @@ type Quiz struct {
 }
 
 type note struct {
-	Note     string `json:"note"`
-	Octave   string `json:"octave"`
-	Index    int    `json:"index"`
-	AudioUrl string `json:"audioUrl"`
+	Note     string
+	Octave   string
+	AudioUrl string
+}
+
+type confirm struct {
+	Correct     bool
+	CorrectNote string
+	Accuracy    float32
 }
 
 func newQuiz(logger *slog.Logger) (*Quiz, error) {
@@ -47,27 +52,27 @@ func (quiz *Quiz) getRandomNote() *note {
 	randNote := quiz.fileList[newR.Intn(len(quiz.fileList))]
 
 	// note name is in format "1-я октава (1), ре, D.wav"
-	var noteForSrv note
+	var note note
 
 	indxLead := strings.Index(randNote.Name(), "(")
 	indxEnd := strings.Index(randNote.Name(), ")")
 
 	if indxLead != -1 && indxEnd != -1 {
-		noteForSrv.Octave = randNote.Name()[indxLead+1 : indxEnd]
+		note.Octave = randNote.Name()[indxLead+1 : indxEnd]
 	}
 
 	indxDot := strings.Index(randNote.Name(), ".")
 	if indxDot != -1 {
-		noteForSrv.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
+		note.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
 	}
 
-	noteForSrv.AudioUrl = randNote.Name()
+	note.AudioUrl = randNote.Name()
 
-	return &noteForSrv
+	return &note
 }
 
-func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirmResponse {
-	var confRes confirmResponse
+func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirm {
+	var confirm confirm
 	var noteData database.DbStruct
 
 	exist := quiz.DB.CheckIfExist(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
@@ -78,12 +83,12 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirmRe
 	}
 
 	if confirmRequest.CurrentNote == confirmRequest.Note && confirmRequest.CurrentOctave == confirmRequest.Octave {
-		confRes.Correct = true
+		confirm.Correct = true
 		noteData.CorrectCount++
 	}
 
-	if !confRes.Correct {
-		confRes.CorrectNote = confirmRequest.CurrentOctave + ", " + confirmRequest.CurrentNote
+	if !confirm.Correct {
+		confirm.CorrectNote = confirmRequest.CurrentOctave + ", " + confirmRequest.CurrentNote
 	}
 
 	noteData.NumTries++
@@ -91,7 +96,7 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirmRe
 
 	quiz.DB.Upsert(&noteData)
 
-	confRes.Accuracy = noteData.Accuracy
+	confirm.Accuracy = noteData.Accuracy
 
-	return &confRes
+	return &confirm
 }
