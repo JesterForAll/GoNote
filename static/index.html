@@ -88,7 +88,7 @@
     <h1>Тренировка слуха 🎹</h1>
     
     <div class="controls">
-        <button id="btnPrev" disabled>◀ Prev</button>
+        <!-- <button id="btnPrev" disabled>◀ Prev</button> -->
         <button id="btnPlay">▶ Play</button>
         <button id="btnNext" disabled>Next ▶</button>
     </div>
@@ -116,10 +116,10 @@
     let currentOctaveData = null; // Текущая нота от сервера (для сравнения)
     let notesList = [];         // Список нот с сервера
     let octavesList = [];       // Список октав с сервера
-    let currentIndex = 0;       // Индекс текущей ноты в списке
+    // let currentIndex = 0;       // Индекс текущей ноты в списке
 
     const btnPlay = document.getElementById('btnPlay');
-    const btnPrev = document.getElementById('btnPrev');
+    // const btnPrev = document.getElementById('btnPrev');
     const btnNext = document.getElementById('btnNext');
     const btnConfirm = document.getElementById('btnConfirm');
     const noteSelect = document.getElementById('noteSelect');
@@ -167,7 +167,7 @@
             
             currentNoteData = data.note;
             currentOctaveData = data.octave;
-            currentIndex = data.index || 0;
+            //currentIndex = data.index || 0;
             currentNoteUrl = data.audioUrl;
             
             // Сбрасываем выбор пользователя
@@ -176,44 +176,44 @@
             resetConfirmButton();
             statusMessage.textContent = '';
             
-            btnPrev.disabled = false;
+            // btnPrev.disabled = false;
             btnNext.disabled = false;
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка получения ноты';
-            btnPrev.disabled = true;
+            // btnPrev.disabled = true;
             btnNext.disabled = true;
         }
     }
 
     // 3. Запрос предыдущей ноты (Prev)
-    async function requestPrevNote() {
-        if (!currentNoteData || currentIndex <= 0) return;
+    // async function requestPrevNote() {
+    //     if (!currentNoteData || currentIndex <= 0) return;
         
-        try {
-            const response = await fetch('/api/prev-note', { 
-                method: 'GET',
-                body: JSON.stringify({ index: currentIndex - 1 })
-            });
+    //     try {
+    //         const response = await fetch('/api/prev-note', { 
+    //             method: 'GET',
+    //             body: JSON.stringify({ index: currentIndex - 1 })
+    //         });
             
-            if (!response.ok) throw new Error('Ошибка получения предыдущей ноты');
+    //         if (!response.ok) throw new Error('Ошибка получения предыдущей ноты');
             
-            const data = await response.json();
+    //         const data = await response.json();
             
-            if (data.type === 'new_note') {
-                currentNoteData = data.note;
-                currentIndex = data.index;
+    //         if (data.type === 'new_note') {
+    //             currentNoteData = data.note;
+    //             currentIndex = data.index;
                 
-                noteSelect.value = "";
-                octaveSelect.value = "";
-                resetConfirmButton();
-                statusMessage.textContent = '';
-            }
-        } catch (error) {
-            console.error('Ошибка:', error);
-            statusMessage.textContent = 'Ошибка загрузки предыдущей ноты';
-        }
-    }
+    //             noteSelect.value = "";
+    //             octaveSelect.value = "";
+    //             resetConfirmButton();
+    //             statusMessage.textContent = '';
+    //         }
+    //     } catch (error) {
+    //         console.error('Ошибка:', error);
+    //         statusMessage.textContent = 'Ошибка загрузки предыдущей ноты';
+    //     }
+    // }
 
     // 4. Кнопка Play - проигрывает аудио
     btnPlay.addEventListener('click', () => {
@@ -242,7 +242,7 @@
 
     // Обработчики кнопок навигации
     btnNext.addEventListener('click', requestNewNote);
-    btnPrev.addEventListener('click', requestPrevNote);
+    // btnPrev.addEventListener('click', requestPrevNote);
 
     // 5. Кнопка подтверждения - отправляет выбор на сервер
     btnConfirm.addEventListener('click', async () => {
