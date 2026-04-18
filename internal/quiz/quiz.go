@@ -36,7 +36,7 @@ func newQuiz(logger *slog.Logger) (*Quiz, error) {
 		return nil, err
 	}
 
-	db, err := database.New("../../static/accuracy.db")
+	db, err := database.New("../../static/accuracy.db", logger, database.AccuracyDbStruct{})
 	if err != nil {
 		logger.Error("failed to connect database", slog.Any("err", err))
 
@@ -71,9 +71,9 @@ func (quiz *Quiz) getRandomNote() *note {
 	return &note
 }
 
-func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirm {
+func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) (*confirm, error) {
 	var confirm confirm
-	var noteData database.DbStruct
+	var noteData database.AccuracyDbStruct
 
 	exist := quiz.DB.CheckIfExist(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
 
@@ -94,9 +94,14 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) *confirm {
 	noteData.NumTries++
 	noteData.Accuracy = float32(noteData.CorrectCount) / float32(noteData.NumTries) * 100.00
 
-	quiz.DB.Upsert(&noteData)
+	err := quiz.DB.Upsert(&noteData)
+	if err != nil {
+		quiz.Logger.Error("error getting data from disk", slog.Any("err", err))
+
+		return nil, err
+	}
 
 	confirm.Accuracy = noteData.Accuracy
 
-	return &confirm
+	return &confirm, nil
 }

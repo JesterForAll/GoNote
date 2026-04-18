@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логин</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        #loginBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        #createBtn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+        }
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>Выберите пользователя</h1>
+    
+    <select id="userSelect">
+        <option value="">Загрузка...</option>
+    </select>
+    
+    <button id="loginBtn">Логин</button>
+    <button id="createBtn">Создать нового пользователя</button>
+    
+    <div id="message"></div>
+
+    <script>
+        const API_BASE = 'api';
+
+        const userSelect = document.getElementById('userSelect');
+        const loginBtn = document.getElementById('loginBtn');
+        const createBtn = document.getElementById('createBtn');
+        const messageDiv = document.getElementById('message');
+
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch(API_BASE + '/getUsers');
+                if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+                
+                const users = await response.json();
+                userSelect.innerHTML = '';
+                
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id || user.name;
+                    option.textContent = user.name || user;
+                    userSelect.appendChild(option);
+                });
+
+                if (users.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Нет пользователей';
+                    userSelect.appendChild(option);
+                }
+            } catch (error) {
+                showMessage('Ошибка: ' + error.message, 'error');
+            }
+        }
+
+        loginBtn.addEventListener('click', async () => {
+            const selectedValue = userSelect.value;
+            if (!selectedValue) {
+                showMessage('Выберите пользователя', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: selectedValue })
+                });
+
+                if (!response.ok) throw new Error('Ошибка входа');
+
+                if (response.redirected) {
+                    window.location.replace(response.url);
+                    // window.location.href = response.url;
+                } else {
+                    const result = await response.json();
+                    showMessage('Вход выполнен успешно!', 'success');
+                    console.log('Login result:', result);
+                }
+
+            } catch (error) {
+                showMessage('Ошибка: ' + error.message, 'error');
+            }
+        });
+
+        createBtn.addEventListener('click', async () => {
+            const newName = prompt('Введите имя нового пользователя:');
+            if (!newName || !newName.trim()) return;
+
+            try {
+                const response = await fetch(API_BASE + '/createUser', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+
+                if (!response.ok) throw new Error('Ошибка создания пользователя');
+                
+                showMessage('Пользователь создан!', 'success');
+                await loadUsers();
+                userSelect.value = '';
+            } catch (error) {
+                showMessage('Ошибка: ' + error.message, 'error');
+            }
+        });
+
+        // Загрузка пользователей при загрузке страницы
+        loadUsers();
+    </script>
+</body>
+</html>
