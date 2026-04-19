@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
+
+	"github.com/JesterForAll/gonote/internal/database"
+	"github.com/JesterForAll/gonote/internal/session"
 )
 
 type LoginHandler struct {
-	loginStruct *loginStruct
-	logger      *slog.Logger
+	loginStruct  *loginStruct
+	logger       *slog.Logger
+	tokenManager *session.TokenManager
 }
 
 type createUserRequest struct {
@@ -20,7 +25,7 @@ type userData struct {
 	ID   uint   `json:"id"`
 }
 
-func New(logger *slog.Logger) (*LoginHandler, error) {
+func New(logger *slog.Logger, tokenManager *session.TokenManager) (*LoginHandler, error) {
 	loginStruct, err := newLogin(logger)
 	if err != nil {
 		logger.Error("failed create login struct", slog.Any("err", err))
@@ -28,7 +33,7 @@ func New(logger *slog.Logger) (*LoginHandler, error) {
 		return nil, err
 	}
 
-	return &LoginHandler{loginStruct: loginStruct, logger: logger}, nil
+	return &LoginHandler{loginStruct: loginStruct, logger: logger, tokenManager: tokenManager}, nil
 }
 
 func (loginHand *LoginHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -92,19 +97,46 @@ func (loginHand *LoginHandler) HandleGetUsers(w http.ResponseWriter, _ *http.Req
 
 func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
-	// data, err := os.ReadFile("../../static/index.html")
+	userID := map[string]string{"id": ""}
 
-	// if err != nil {
-	// 	loginHand.logger.Error("error reading main page", slog.Any("err", err))
-	// 	http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
+	err := json.NewDecoder(r.Body).Decode(&userID)
+	if err != nil {
+		loginHand.logger.Error("error decoding create user request", slog.Any("err", err))
+		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
 
-	// 	return
-	// }
+		return
+	}
 
-	// w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// w.WriteHeader(http.StatusOK)
+	userIDint, err := strconv.Atoi(userID["id"])
+	if err != nil {
+		loginHand.logger.Error("error converting user id in create user request", slog.Any("err", err))
+		http.Error(w, "Bad request, error converting user id", http.StatusBadRequest)
 
-	// w.Write(data)
+		return
+	}
+
+	var userDB database.LoginDBStruct
+
+	exist := loginHand.loginStruct.DB.CheckIfExistAndGetFirst(map[string]interface{}{"id": userIDint}, &userDB)
+	if !exist {
+		loginHand.logger.Error("login error, selected user doesnt exist", slog.Any("err", err))
+		http.Error(w, "Bad request, selected user doesnt exist", http.StatusBadRequest)
+
+		return
+	}
+
+	cookieVal := strconv.Itoa(int(userDB.ID)) + ":" + loginHand.tokenManager.GetToken()
+
+	cookie := &http.Cookie{
+		Name:     "user_id",
+		Value:    cookieVal,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   86400,
+	}
+	http.SetCookie(w, cookie)
+
+	loginHand.logger.Info("user logined", "user_name", userDB.UserName, "user id", userDB.ID)
 
 	http.Redirect(w, r, "/main", http.StatusSeeOther)
 

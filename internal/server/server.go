@@ -6,14 +6,17 @@ import (
 	"os"
 
 	"github.com/JesterForAll/gonote/internal/login"
+	"github.com/JesterForAll/gonote/internal/middleware"
 	"github.com/JesterForAll/gonote/internal/quiz"
+	"github.com/JesterForAll/gonote/internal/session"
 )
 
 type MainServ struct {
-	Serv      *http.ServeMux
-	Logger    *slog.Logger
-	QuizHand  *quiz.QuizHandler
-	LoginHand *login.LoginHandler
+	Serv        *http.ServeMux
+	TokenManage *session.TokenManager
+	Logger      *slog.Logger
+	QuizHand    *quiz.QuizHandler
+	LoginHand   *login.LoginHandler
 }
 
 func New(logger *slog.Logger) (*MainServ, error) {
@@ -25,30 +28,62 @@ func New(logger *slog.Logger) (*MainServ, error) {
 		return nil, err
 	}
 
-	loginHand, err := login.New(logger)
+	tokenManager := session.NewTokenManager()
+
+	loginHand, err := login.New(logger, tokenManager)
 	if err != nil {
 		logger.Error("internal error", slog.Any("err", err))
 		return nil, err
 	}
 
 	mServ := &MainServ{
-		Serv:      serv,
-		Logger:    logger,
-		QuizHand:  quizHand,
-		LoginHand: loginHand,
+		Serv:        serv,
+		Logger:      logger,
+		QuizHand:    quizHand,
+		LoginHand:   loginHand,
+		TokenManage: tokenManager,
 	}
 
-	serv.HandleFunc("GET /", mServ.handleGetRoot)
-	serv.HandleFunc("GET /main", mServ.handleGetMain)
+	// serv.HandleFunc("GET /", mServ.handleGetRoot)
+	// serv.HandleFunc("GET /main", mServ.handleGetMain)
 
-	serv.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
-	serv.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
-	serv.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+	// serv.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
+	// serv.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
+	// serv.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+	// serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
+
+	// serv.HandleFunc("GET /api/getUsers", mServ.LoginHand.HandleGetUsers)
+	// serv.HandleFunc("POST /api/createUser", mServ.LoginHand.HandleCreateUser)
+	// serv.HandleFunc("POST /api/login", mServ.LoginHand.HandleLogin)
+
+	// wrappedServ := middleware.UserContextMiddleware(serv)
+
+	// mServ.Hanlder = wrappedServ
+
+	publicMux := http.NewServeMux()
+
+	publicMux.HandleFunc("GET /", mServ.handleGetRoot)
+	publicMux.HandleFunc("GET /api/login/getUsers", mServ.LoginHand.HandleGetUsers)
+	publicMux.HandleFunc("POST /api/login/createUser", mServ.LoginHand.HandleCreateUser)
+	publicMux.HandleFunc("POST /api/login/login", mServ.LoginHand.HandleLogin)
+
+	authMux := http.NewServeMux()
+
+	authMux.HandleFunc("GET /main", mServ.handleGetMain)
+	authMux.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
+	authMux.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
+	authMux.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+
+	authHanlder := middleware.NewUserContextMiddleware(tokenManager, authMux, logger)
+
+	serv.Handle("/", publicMux)
+	serv.Handle("/api/login/", publicMux)
+	serv.Handle("/api/", authHanlder)
+	serv.Handle("/main", authHanlder)
+
 	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
 
-	serv.HandleFunc("GET /api/getUsers", mServ.LoginHand.HandleGetUsers)
-	serv.HandleFunc("POST /api/createUser", mServ.LoginHand.HandleCreateUser)
-	serv.HandleFunc("POST /api/login", mServ.LoginHand.HandleLogin)
+	// mServ.Hanlder = wrappedServ
 
 	return mServ, nil
 }

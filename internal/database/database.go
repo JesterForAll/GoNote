@@ -25,7 +25,7 @@ func New(filePath string, logger *slog.Logger, model ...interface{}) (*Database,
 	return &Database{DB: db}, nil
 }
 
-func (db *Database) CheckIfExist(condition map[string]interface{}, result interface{}) bool {
+func (db *Database) CheckIfExistAndGetFirst(condition map[string]interface{}, result interface{}) bool {
 	res := db.DB.Where(condition).First(result)
 
 	return res.RowsAffected != 0

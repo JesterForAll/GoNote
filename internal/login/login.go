@@ -28,7 +28,7 @@ func (login *loginStruct) createUser(name string) error {
 
 	var nameData database.LoginDBStruct
 
-	exist := login.DB.CheckIfExist(map[string]interface{}{"user_name": name}, &nameData)
+	exist := login.DB.CheckIfExistAndGetFirst(map[string]interface{}{"user_name": name}, &nameData)
 
 	if exist {
 		return errors.New("This user is already exist")

@@ -9,4 +9,5 @@ type AccuracyDbStruct struct {
 	NumTries     int
 	CorrectCount int
 	Accuracy     float32
+	UserID       int
 }

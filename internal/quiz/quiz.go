@@ -1,6 +1,7 @@
 package quiz
 
 import (
+	"context"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/JesterForAll/gonote/internal/database"
+	"github.com/JesterForAll/gonote/internal/middleware"
 )
 
 type Quiz struct {
@@ -71,15 +73,22 @@ func (quiz *Quiz) getRandomNote() *note {
 	return &note
 }
 
-func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest) (*confirm, error) {
+func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx context.Context) (*confirm, error) {
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
-	exist := quiz.DB.CheckIfExist(map[string]interface{}{"Note": confirmRequest.CurrentNote, "Octave": confirmRequest.CurrentOctave}, &noteData)
+	userID := ctx.Value(middleware.UserIDKey).(int)
+
+	exist := quiz.DB.CheckIfExistAndGetFirst(map[string]interface{}{
+		"note":    confirmRequest.CurrentNote,
+		"octave":  confirmRequest.CurrentOctave,
+		"user_id": userID,
+	}, &noteData)
 
 	if !exist {
 		noteData.Note = confirmRequest.CurrentNote
 		noteData.Octave = confirmRequest.CurrentOctave
+		noteData.UserID = userID
 	}
 
 	if confirmRequest.CurrentNote == confirmRequest.Note && confirmRequest.CurrentOctave == confirmRequest.Octave {
