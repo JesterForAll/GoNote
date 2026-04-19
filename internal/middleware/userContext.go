@@ -15,15 +15,15 @@ type contextKey string
 const UserIDKey contextKey = "userID"
 
 type UserContextMiddleware struct {
-	TokenManager *session.TokenManager
-	Next         http.Handler
+	tokenManager *session.TokenManager
+	next         http.Handler
 	logger       *slog.Logger
 }
 
 func NewUserContextMiddleware(tokenManager *session.TokenManager, next http.Handler, logger *slog.Logger) *UserContextMiddleware {
 	return &UserContextMiddleware{
-		TokenManager: tokenManager,
-		Next:         next,
+		tokenManager: tokenManager,
+		next:         next,
 		logger:       logger,
 	}
 }
@@ -45,7 +45,7 @@ func (m *UserContextMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	currentToken := m.TokenManager.GetToken()
+	currentToken := m.tokenManager.GetToken()
 	if parts[1] != currentToken {
 		m.logger.Error("Session expired")
 		http.Error(w, "Session expired", http.StatusUnauthorized)
@@ -62,5 +62,5 @@ func (m *UserContextMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	ctx := context.WithValue(r.Context(), UserIDKey, userID)
-	m.Next.ServeHTTP(w, r.WithContext(ctx))
+	m.next.ServeHTTP(w, r.WithContext(ctx))
 }

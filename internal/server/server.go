@@ -44,22 +44,6 @@ func New(logger *slog.Logger) (*MainServ, error) {
 		TokenManage: tokenManager,
 	}
 
-	// serv.HandleFunc("GET /", mServ.handleGetRoot)
-	// serv.HandleFunc("GET /main", mServ.handleGetMain)
-
-	// serv.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
-	// serv.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
-	// serv.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
-	// serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
-
-	// serv.HandleFunc("GET /api/getUsers", mServ.LoginHand.HandleGetUsers)
-	// serv.HandleFunc("POST /api/createUser", mServ.LoginHand.HandleCreateUser)
-	// serv.HandleFunc("POST /api/login", mServ.LoginHand.HandleLogin)
-
-	// wrappedServ := middleware.UserContextMiddleware(serv)
-
-	// mServ.Hanlder = wrappedServ
-
 	publicMux := http.NewServeMux()
 
 	publicMux.HandleFunc("GET /", mServ.handleGetRoot)
@@ -82,8 +66,6 @@ func New(logger *slog.Logger) (*MainServ, error) {
 	serv.Handle("/main", authHanlder)
 
 	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
-
-	// mServ.Hanlder = wrappedServ
 
 	return mServ, nil
 }
