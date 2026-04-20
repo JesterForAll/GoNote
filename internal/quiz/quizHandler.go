@@ -109,7 +109,7 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 
 	quizHand.Logger.Info("got input\n", "confirmRequest", confirmRequest)
 
-	confirm, err := quizHand.Quiz.processConfirmation(&confirmRequest, r.Context())
+	confirm, err := quizHand.Quiz.processConfirmation(r.Context(), &confirmRequest)
 	if err != nil {
 		quizHand.Logger.Error("error saving to database", slog.Any("err", err))
 		http.Error(w, "internal server error while saving to database", http.StatusInternalServerError)

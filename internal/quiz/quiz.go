@@ -80,7 +80,7 @@ func (quiz *Quiz) getRandomNote() *note {
 	return &note
 }
 
-func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx context.Context) (*confirm, error) {
+func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confirmRequest) (*confirm, error) {
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
