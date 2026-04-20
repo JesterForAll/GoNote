@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+
+	"github.com/JesterForAll/gonote/internal/balance"
+	"github.com/JesterForAll/gonote/internal/inventory"
 )
 
 type availibleNotes struct {
@@ -40,9 +43,9 @@ type noteResponce struct {
 	AudioUrl string `json:"audioUrl"`
 }
 
-func New(logger *slog.Logger) (*QuizHandler, error) {
+func New(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inventory) (*QuizHandler, error) {
 
-	quiz, err := newQuiz(logger)
+	quiz, err := newQuiz(logger, balance, inv)
 	if err != nil {
 		logger.Error("failed create quiz", slog.Any("err", err))
 

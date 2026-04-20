@@ -135,7 +135,7 @@ func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Reques
 		Name:     "user_id",
 		Value:    cookieVal,
 		Path:     "/",
-		HttpOnly: true,
+		HttpOnly: false,
 		MaxAge:   86400,
 	}
 	http.SetCookie(w, cookie)

@@ -11,9 +11,17 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #f0f2f5;
+        }
+
+        .main-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
         }
 
         .container {
@@ -71,7 +79,6 @@
         }
 
         .confirm-btn:hover { background-color: #218838; }
-        
         .confirm-btn.correct { background-color: #28a745 !important; color: white; }
         .confirm-btn.wrong { background-color: #dc3545 !important; color: white; }
 
@@ -80,53 +87,126 @@
             font-weight: bold;
             min-height: 24px;
         }
+
+        /* Стили для боковой панели */
+        .sidebar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 220px;
+            max-width: 250px;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .buy-btn {
+            width: 100%;
+            background-color: #ffc107;
+            color: #212529;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 12px;
+        }
+
+        .buy-btn:hover { background-color: #e0a800; }
+        .buy-btn:disabled { background-color: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Тренировка слуха 🎹</h1>
-    
-    <div class="controls">
-        <!-- <button id="btnPrev" disabled>◀ Prev</button> -->
-        <button id="btnPlay">▶ Play</button>
-        <button id="btnNext" disabled>Next ▶</button>
+<div class="main-wrapper">
+    <!-- Основная игровая зона -->
+    <div class="container">
+        <h1>Тренировка слуха 🎹</h1>
+        
+        <div class="controls">
+            <button id="btnPlay">▶ Play</button>
+            <button id="btnNext" disabled>Next ▶</button>
+        </div>
+
+        <div class="selection-area">
+            <select id="octaveSelect">
+                <option value="" disabled selected>Октава</option>
+            </select>
+
+            <select id="noteSelect">
+                <option value="" disabled selected>Нота</option>
+            </select>
+        </div>
+
+        <button id="btnConfirm" class="confirm-btn">Подтвердить выбор</button>
+        
+        <div id="statusMessage" class="status-message"></div>
     </div>
 
-    <div class="selection-area">
-        <select id="octaveSelect">
-            <option value="" disabled selected>Октава</option>
-            <!-- Опции будут загружены с сервера -->
-        </select>
-
-        <select id="noteSelect">
-            <option value="" disabled selected>Нота</option>
-            <!-- Опции будут загружены с сервера -->
-        </select>
+    <!-- Боковая панель статистики -->
+    <div class="sidebar">
+        <h2>Статистика</h2>
+        <div class="stat-item">
+            <span>Баланс:</span>
+            <span id="balanceDisplay" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+            <span>Безопасные ошибки:</span>
+            <span id="safeFailsDisplay" class="stat-value">0</span>
+        </div>
+        <button id="btnBuySafeFail" class="buy-btn">Купить безопасную ошибку (10)</button>
     </div>
-
-    <button id="btnConfirm" class="confirm-btn">Подтвердить выбор</button>
-    
-    <div id="statusMessage" class="status-message"></div>
 </div>
 
 <script>
     let currentNoteData = null;
     let currentNoteUrl = null;
-    let currentOctaveData = null; // Текущая нота от сервера (для сравнения)
-    let notesList = [];         // Список нот с сервера
-    let octavesList = [];       // Список октав с сервера
-    // let currentIndex = 0;       // Индекс текущей ноты в списке
+    let currentOctaveData = null;
+    let notesList = [];         
+    let octavesList = [];       
 
     const btnPlay = document.getElementById('btnPlay');
-    // const btnPrev = document.getElementById('btnPrev');
     const btnNext = document.getElementById('btnNext');
     const btnConfirm = document.getElementById('btnConfirm');
     const noteSelect = document.getElementById('noteSelect');
     const octaveSelect = document.getElementById('octaveSelect');
     const statusMessage = document.getElementById('statusMessage');
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    const safeFailsDisplay = document.getElementById('safeFailsDisplay');
+    const btnBuySafeFail = document.getElementById('btnBuySafeFail');
 
-    // 1. Загрузка списка доступных нот и октав при старте
+    // Функция для получения значения куки
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(':').shift();
+    }
+
+    // Получаем ID пользователя из куки, которую устанавливает сервер при логине
+    const userId = getCookie('user_id');
+
+    if (!userId) {
+        console.error("User ID not found in cookies. Please login.");
+        statusMessage.textContent = "Ошибка: пользователь не авторизован";
+    }
+
     async function loadOptions() {
         try {
             const response = await fetch('/api/availibleNotes', { method: 'GET' });
@@ -136,7 +216,6 @@
             notesList = data.notes || [];
             octavesList = data.octaves || [];
 
-            // Заполняем выпадающие списки
             notesList.forEach(note => {
                 const option = document.createElement('option');
                 option.value = note;
@@ -150,101 +229,71 @@
                 option.textContent = octave;
                 octaveSelect.appendChild(option);
             });
-
         } catch (error) {
             console.error('Ошибка загрузки опций:', error);
             statusMessage.textContent = 'Не удалось загрузить список нот';
         }
     }
 
-    // 2. Запрос новой ноты (Next)
     async function requestNewNote() {
         try {
             const response = await fetch('/api/new-note', { method: 'GET' });
             if (!response.ok) throw new Error('Ошибка получения ноты');
             
             const data = await response.json();
-            
             currentNoteData = data.note;
             currentOctaveData = data.octave;
-            //currentIndex = data.index || 0;
             currentNoteUrl = data.audioUrl;
             
-            // Сбрасываем выбор пользователя
             noteSelect.value = "";
             octaveSelect.value = "";
             resetConfirmButton();
             statusMessage.textContent = '';
-            
-            // btnPrev.disabled = false;
             btnNext.disabled = false;
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка получения ноты';
-            // btnPrev.disabled = true;
             btnNext.disabled = true;
         }
     }
 
-    // 3. Запрос предыдущей ноты (Prev)
-    // async function requestPrevNote() {
-    //     if (!currentNoteData || currentIndex <= 0) return;
-        
-    //     try {
-    //         const response = await fetch('/api/prev-note', { 
-    //             method: 'GET',
-    //             body: JSON.stringify({ index: currentIndex - 1 })
-    //         });
+    // Загрузка баланса и безопасных ошибок
+    async function loadStats() {
+        try {
+            const [balanceRes, safeFailsRes] = await Promise.all([
+                fetch(`/api/balance?user_id=${userId}`),
+                fetch(`/api/num-of-safe-fails?user_id=${userId}`)
+            ]);
             
-    //         if (!response.ok) throw new Error('Ошибка получения предыдущей ноты');
-            
-    //         const data = await response.json();
-            
-    //         if (data.type === 'new_note') {
-    //             currentNoteData = data.note;
-    //             currentIndex = data.index;
-                
-    //             noteSelect.value = "";
-    //             octaveSelect.value = "";
-    //             resetConfirmButton();
-    //             statusMessage.textContent = '';
-    //         }
-    //     } catch (error) {
-    //         console.error('Ошибка:', error);
-    //         statusMessage.textContent = 'Ошибка загрузки предыдущей ноты';
-    //     }
-    // }
+            if (!balanceRes.ok || !safeFailsRes.ok) throw new Error('Ошибка загрузки статистики');
 
-    // 4. Кнопка Play - проигрывает аудио
-    btnPlay.addEventListener('click', () => {
-        console.log("Клик по Play");
-        
-        if  (currentNoteUrl) {
-            const audioPath = `/notes/${encodeURIComponent(currentNoteUrl)}`
-            console.log(audioPath)
-            
-        try{
-            const audio = new Audio(audioPath);
-            audio.play();
-            btnPlay.disabled = true;
-            
-            audio.onended = () => {
-                btnPlay.disabled = false;
-            };
-        } catch{
-            console.error('Ошибка:', error);
-            statusMessage.textContent = 'Ошибка вопроизведения ноты';
+            const balanceData = await balanceRes.json();
+            const safeFailsData = await safeFailsRes.json();
+
+            balanceDisplay.textContent = balanceData.balance;
+            safeFailsDisplay.textContent = safeFailsData.NumOfSafeFails;
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
         }
-        } else {
-            console.log("currentNoteUrl не заполнен")
+    }
+
+    btnPlay.addEventListener('click', () => {
+        if (currentNoteUrl) {
+            const audioPath = `/notes/${encodeURIComponent(currentNoteUrl)}`;
+            try {
+                const audio = new Audio(audioPath);
+                audio.play();
+                btnPlay.disabled = true;
+                audio.onended = () => { btnPlay.disabled = false; };
+            } catch (error) {
+                console.error('Ошибка воспроизведения:', error);
+                statusMessage.textContent = 'Ошибка воспроизведения ноты';
+            }
         }
     });
 
-    // Обработчики кнопок навигации
     btnNext.addEventListener('click', requestNewNote);
-    // btnPrev.addEventListener('click', requestPrevNote);
 
-    // 5. Кнопка подтверждения - отправляет выбор на сервер
     btnConfirm.addEventListener('click', async () => {
         if (!currentNoteData) return;
 
@@ -266,33 +315,60 @@
                 body: JSON.stringify({ 
                     note: selectedNote, 
                     octave: selectedOctave,
-                    currentNote : currentNoteData,
+                    currentNote: currentNoteData,
                     currentOctave: currentOctaveData 
                 })
             });
             
             if (!response.ok) throw new Error('Ошибка сети');
-            
             const data = await response.json();
             
-            // if (data.type === 'result') {
             if (data.correct) {
                 btnConfirm.className = 'confirm-btn correct';
                 statusMessage.textContent = `Верно! 🎉. Точность - ${data.accuracy} %`;
             } else {
                 btnConfirm.className = 'confirm-btn wrong';
-                console.log("got data response: ", data)
                 statusMessage.textContent = `Неверно. Правильная нота: ${data.correctNote}. Точность - ${data.accuracy} %`;
             }
+
+            // Перезагружаем статистику, чтобы отобразить новый баланс и количество ошибок
+            await loadStats();
             
-            setTimeout(() => {
-                resetConfirmButton();
-                }, 2000);
-            // }
+            setTimeout(() => resetConfirmButton(), 1000);
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка проверки';
             resetConfirmButton();
+        }
+    });
+
+    // Покупка безопасной ошибки
+    btnBuySafeFail.addEventListener('click', async () => {
+        btnBuySafeFail.disabled = true;
+        btnBuySafeFail.textContent = 'Покупка...';
+        
+        try {
+            const response = await fetch('/api/update-safe-fails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId.toString() })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка покупки');
+            
+            // Перезагружаем статистику, чтобы отобразить новый баланс и количество ошибок
+            await loadStats();
+            
+            btnBuySafeFail.textContent = 'Куплено!';
+            setTimeout(() => {
+                btnBuySafeFail.textContent = 'Купить безопасную ошибку (10)';
+            }, 1500);
+        } catch (error) {
+            console.error('Ошибка покупки:', error);
+            alert('Не удалось купить безопасную ошибку. Проверьте консоль.');
+            btnBuySafeFail.textContent = 'Купить безопасную ошибку (10)';
+        } finally {
+            btnBuySafeFail.disabled = false;
         }
     });
 
@@ -301,9 +377,9 @@
         btnConfirm.disabled = false;
     }
 
-    // Инициализация: загружаем опции и получаем первую ноту
     loadOptions().then(() => {
         requestNewNote();
+        loadStats(); // Загружаем статистику при старте
     });
 </script>
 
