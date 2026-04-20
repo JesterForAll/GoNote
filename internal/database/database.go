@@ -1,6 +1,8 @@
 package database
 
 import (
+	"log/slog"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -9,40 +11,30 @@ type Database struct {
 	DB *gorm.DB
 }
 
-type DbStruct struct {
-	gorm.Model
-	Note         string
-	Octave       string
-	NumTries     int
-	CorrectCount int
-	Accuracy     float32
-}
-
-func New(filePath string) (*Database, error) {
+func New(filePath string, logger *slog.Logger, model ...interface{}) (*Database, error) {
 	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
 
-	db.AutoMigrate(&DbStruct{})
+	err = db.AutoMigrate(model...)
+	if err != nil {
+		logger.Error("error migrating database", slog.Any("err", err))
+	}
 
 	return &Database{DB: db}, nil
 }
 
-func (db *Database) CheckIfExist(condition map[string]interface{}, result *DbStruct) bool {
-	exist := false
+func (db *Database) CheckIfExistAndGetFirst(condition map[string]interface{}, result interface{}) bool {
+	res := db.DB.Where(condition).First(result)
 
-	answr := db.DB.Where(condition).Find(result)
-
-	if answr.RowsAffected == 0 {
-		return exist
-	}
-
-	exist = true
-
-	return exist
+	return res.RowsAffected != 0
 }
 
-func (db *Database) Upsert(data *DbStruct) {
-	db.DB.Save(data)
+func (db *Database) Upsert(data interface{}) error {
+	return db.DB.Save(data).Error
+}
+
+func (db *Database) GetAll(result interface{}) error {
+	return db.DB.Find(result).Error
 }

@@ -5,36 +5,87 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/JesterForAll/gonote/internal/login"
+	"github.com/JesterForAll/gonote/internal/middleware"
 	"github.com/JesterForAll/gonote/internal/quiz"
+	"github.com/JesterForAll/gonote/internal/session"
 )
 
 type MainServ struct {
-	Serv     *http.ServeMux
-	Logger   *slog.Logger
-	QuizHand *quiz.QuizHandler
+	Serv        *http.ServeMux
+	TokenManage *session.TokenManager
+	Logger      *slog.Logger
+	QuizHand    *quiz.QuizHandler
+	LoginHand   *login.LoginHandler
 }
 
-func New(logger *slog.Logger) *MainServ {
+func New(logger *slog.Logger) (*MainServ, error) {
 	serv := http.NewServeMux()
-	quizHand, err := quiz.New(logger)
 
+	quizHand, err := quiz.New(logger)
 	if err != nil {
 		logger.Error("internal error", slog.Any("err", err))
+		return nil, err
+	}
+
+	tokenManager := session.NewTokenManager()
+
+	loginHand, err := login.New(logger, tokenManager)
+	if err != nil {
+		logger.Error("internal error", slog.Any("err", err))
+		return nil, err
 	}
 
 	mServ := &MainServ{
-		Serv:     serv,
-		Logger:   logger,
-		QuizHand: quizHand,
+		Serv:        serv,
+		Logger:      logger,
+		QuizHand:    quizHand,
+		LoginHand:   loginHand,
+		TokenManage: tokenManager,
 	}
 
-	serv.HandleFunc("GET /", mServ.handleGetMain)
-	serv.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
-	serv.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
-	serv.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+	publicMux := http.NewServeMux()
+
+	publicMux.HandleFunc("GET /", mServ.handleGetRoot)
+	publicMux.HandleFunc("GET /api/login/getUsers", mServ.LoginHand.HandleGetUsers)
+	publicMux.HandleFunc("POST /api/login/createUser", mServ.LoginHand.HandleCreateUser)
+	publicMux.HandleFunc("POST /api/login/login", mServ.LoginHand.HandleLogin)
+
+	authMux := http.NewServeMux()
+
+	authMux.HandleFunc("GET /main", mServ.handleGetMain)
+	authMux.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
+	authMux.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
+	authMux.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+
+	authHanlder := middleware.NewUserContextMiddleware(tokenManager, authMux, logger)
+
+	serv.Handle("/", publicMux)
+	serv.Handle("/api/login/", publicMux)
+	serv.Handle("/api/", authHanlder)
+	serv.Handle("/main", authHanlder)
+
 	serv.Handle("GET /notes/", http.StripPrefix("/notes/", http.FileServer(http.Dir("../../assets"))))
 
-	return mServ
+	return mServ, nil
+}
+
+func (mServ *MainServ) handleGetRoot(w http.ResponseWriter, _ *http.Request) {
+
+	data, err := os.ReadFile("../../static/login.html")
+
+	if err != nil {
+		mServ.Logger.Error("error reading main page", slog.Any("err", err))
+		http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	w.Write(data)
+
 }
 
 func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {

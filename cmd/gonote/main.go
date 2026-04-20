@@ -14,7 +14,11 @@ func main() {
 	slogger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(slogger)
 
-	mServ := server.New(slogger)
+	mServ, err := server.New(slogger)
+	if err != nil {
+		slogger.Error("error while creating server", "error", err)
+		os.Exit(1)
+	}
 
 	config, err := ParseConfig()
 	if err != nil && errors.Is(err, os.ErrNotExist) {
