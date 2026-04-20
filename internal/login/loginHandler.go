@@ -25,6 +25,10 @@ type userData struct {
 	ID   uint   `json:"id"`
 }
 
+type userID struct {
+	ID string `json:"id"`
+}
+
 func New(logger *slog.Logger, tokenManager *session.TokenManager) (*LoginHandler, error) {
 	loginStruct, err := newLogin(logger)
 	if err != nil {
@@ -97,7 +101,7 @@ func (loginHand *LoginHandler) HandleGetUsers(w http.ResponseWriter, _ *http.Req
 
 func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
-	userID := map[string]string{"id": ""}
+	var userID userID
 
 	err := json.NewDecoder(r.Body).Decode(&userID)
 	if err != nil {
@@ -107,7 +111,7 @@ func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userIDint, err := strconv.Atoi(userID["id"])
+	userIDint, err := strconv.Atoi(userID.ID)
 	if err != nil {
 		loginHand.logger.Error("error converting user id in create user request", slog.Any("err", err))
 		http.Error(w, "Bad request, error converting user id", http.StatusBadRequest)

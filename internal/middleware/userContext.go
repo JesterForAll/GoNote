@@ -7,12 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/JesterForAll/gonote/internal/contextkey"
 	"github.com/JesterForAll/gonote/internal/session"
 )
-
-type contextKey string
-
-const UserIDKey contextKey = "userID"
 
 type UserContextMiddleware struct {
 	tokenManager *session.TokenManager
@@ -61,6 +58,6 @@ func (m *UserContextMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx := context.WithValue(r.Context(), UserIDKey, userID)
+	ctx := context.WithValue(r.Context(), contextkey.GetUserIDKey(), userID)
 	m.next.ServeHTTP(w, r.WithContext(ctx))
 }

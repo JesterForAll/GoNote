@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JesterForAll/gonote/internal/contextkey"
 	"github.com/JesterForAll/gonote/internal/database"
-	"github.com/JesterForAll/gonote/internal/middleware"
 )
 
 type Quiz struct {
@@ -77,7 +77,7 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx contex
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
-	userID := ctx.Value(middleware.UserIDKey).(int)
+	userID := ctx.Value(contextkey.GetUserIDKey()).(int)
 
 	exist := quiz.DB.CheckIfExistAndGetFirst(map[string]interface{}{
 		"note":    confirmRequest.CurrentNote,
