@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"log/slog"
 
 	"gorm.io/driver/sqlite"
@@ -31,10 +32,22 @@ func (db *Database) CheckIfExistAndGetFirst(condition map[string]interface{}, re
 	return res.RowsAffected != 0
 }
 
+func (db *Database) Begin() *gorm.DB {
+	return db.DB.Begin()
+}
+
+func (db *Database) WithContext(ctx context.Context) *gorm.DB {
+	return db.DB.WithContext(ctx)
+}
+
 func (db *Database) Upsert(data interface{}) error {
 	return db.DB.Save(data).Error
 }
 
 func (db *Database) GetAll(result interface{}) error {
 	return db.DB.Find(result).Error
+}
+
+func (db *Database) UpsertWithTx(tx *gorm.DB, data interface{}) error {
+	return tx.Save(data).Error
 }

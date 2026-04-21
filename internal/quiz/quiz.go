@@ -2,20 +2,27 @@ package quiz
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/JesterForAll/gonote/internal/balance"
 	"github.com/JesterForAll/gonote/internal/contextkey"
 	"github.com/JesterForAll/gonote/internal/database"
+	"github.com/JesterForAll/gonote/internal/inventory"
+	"github.com/JesterForAll/gonote/internal/transaction"
+	"gorm.io/gorm"
 )
 
 type Quiz struct {
-	Logger   *slog.Logger
-	DB       *database.Database
-	fileList []os.DirEntry
+	Logger    *slog.Logger
+	DB        *database.Database
+	fileList  []os.DirEntry
+	balance   *balance.Balance
+	inventory *inventory.Inventory
 }
 
 type note struct {
@@ -30,7 +37,7 @@ type confirm struct {
 	Accuracy    float32
 }
 
-func newQuiz(logger *slog.Logger) (*Quiz, error) {
+func newQuiz(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inventory) (*Quiz, error) {
 	fileList, err := os.ReadDir("../../assets")
 	if err != nil {
 		logger.Error("error getting data from disk", slog.Any("err", err))
@@ -45,7 +52,7 @@ func newQuiz(logger *slog.Logger) (*Quiz, error) {
 		return nil, err
 	}
 
-	return &Quiz{fileList: fileList, DB: db, Logger: logger}, nil
+	return &Quiz{fileList: fileList, DB: db, Logger: logger, balance: balance, inventory: inv}, nil
 }
 
 func (quiz *Quiz) getRandomNote() *note {
@@ -73,7 +80,7 @@ func (quiz *Quiz) getRandomNote() *note {
 	return &note
 }
 
-func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx context.Context) (*confirm, error) {
+func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confirmRequest) (*confirm, error) {
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
@@ -89,6 +96,7 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx contex
 		noteData.Note = confirmRequest.CurrentNote
 		noteData.Octave = confirmRequest.CurrentOctave
 		noteData.UserID = userID
+		noteData.Accuracy = 0
 	}
 
 	if confirmRequest.CurrentNote == confirmRequest.Note && confirmRequest.CurrentOctave == confirmRequest.Octave {
@@ -96,21 +104,57 @@ func (quiz *Quiz) processConfirmation(confirmRequest *confirmRequest, ctx contex
 		noteData.CorrectCount++
 	}
 
+	valUpdateBalance := balance.BalancePlusForWin
+
 	if !confirm.Correct {
 		confirm.CorrectNote = confirmRequest.CurrentOctave + ", " + confirmRequest.CurrentNote
+
+		valUpdateBalance *= -1
+	}
+
+	numOfSafeFails := quiz.inventory.GetCurrentNumOfSafeFails(userID)
+
+	//we have safe fail, we need to change number of safe fails and return data, but dont change accuracy and num tries
+	if numOfSafeFails > 0 && !confirm.Correct {
+		_, err := quiz.inventory.UpdateCurrentNumOfSafeFails(userID, false)
+
+		if err != nil {
+			quiz.Logger.Error("error updating number of safe fails", slog.Any("err", err))
+
+			return nil, err
+		}
+
+		confirm.Accuracy = noteData.Accuracy
+
+		return &confirm, nil
 	}
 
 	noteData.NumTries++
 	noteData.Accuracy = float32(noteData.CorrectCount) / float32(noteData.NumTries) * 100.00
 
-	err := quiz.DB.Upsert(&noteData)
-	if err != nil {
-		quiz.Logger.Error("error getting data from disk", slog.Any("err", err))
+	confirm.Accuracy = noteData.Accuracy
 
+	//running a transaction
+	err := transaction.RunMulti(ctx, transaction.MultiConfig{
+		Name:   "process confirmation transaction",
+		Logger: quiz.Logger,
+		DBs:    []*database.Database{quiz.DB, quiz.balance.Db}},
+		func(ctx context.Context, txs ...*gorm.DB) error {
+
+			if err := quiz.DB.UpsertWithTx(txs[0], &noteData); err != nil {
+				return fmt.Errorf("error upserting note data: %w", err)
+			}
+
+			if err := quiz.balance.UpdateCurrentBalanceWithTx(txs[1], userID, valUpdateBalance); err != nil {
+				return fmt.Errorf("error updating balance: %w", err)
+			}
+
+			return nil
+		})
+
+	if err != nil {
 		return nil, err
 	}
-
-	confirm.Accuracy = noteData.Accuracy
 
 	return &confirm, nil
 }

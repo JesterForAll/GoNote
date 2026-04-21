@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/JesterForAll/gonote/internal/balance"
+	"github.com/JesterForAll/gonote/internal/inventory"
 	"github.com/JesterForAll/gonote/internal/login"
 	"github.com/JesterForAll/gonote/internal/middleware"
 	"github.com/JesterForAll/gonote/internal/quiz"
@@ -12,21 +14,17 @@ import (
 )
 
 type MainServ struct {
-	Serv        *http.ServeMux
-	TokenManage *session.TokenManager
-	Logger      *slog.Logger
-	QuizHand    *quiz.QuizHandler
-	LoginHand   *login.LoginHandler
+	Serv           *http.ServeMux
+	TokenManage    *session.TokenManager
+	Logger         *slog.Logger
+	QuizHand       *quiz.QuizHandler
+	LoginHand      *login.LoginHandler
+	InventoryHand  *inventory.InventoryHandler
+	BalanceHandler *balance.BalanceHandler
 }
 
 func New(logger *slog.Logger) (*MainServ, error) {
 	serv := http.NewServeMux()
-
-	quizHand, err := quiz.New(logger)
-	if err != nil {
-		logger.Error("internal error", slog.Any("err", err))
-		return nil, err
-	}
 
 	tokenManager := session.NewTokenManager()
 
@@ -36,12 +34,32 @@ func New(logger *slog.Logger) (*MainServ, error) {
 		return nil, err
 	}
 
+	balanceHand, err := balance.New(logger)
+	if err != nil {
+		logger.Error("internal error", slog.Any("err", err))
+		return nil, err
+	}
+
+	invHand, err := inventory.New(logger, balanceHand.Balance)
+	if err != nil {
+		logger.Error("internal error", slog.Any("err", err))
+		return nil, err
+	}
+
+	quizHand, err := quiz.New(logger, balanceHand.Balance, invHand.Inventory)
+	if err != nil {
+		logger.Error("internal error", slog.Any("err", err))
+		return nil, err
+	}
+
 	mServ := &MainServ{
-		Serv:        serv,
-		Logger:      logger,
-		QuizHand:    quizHand,
-		LoginHand:   loginHand,
-		TokenManage: tokenManager,
+		Serv:           serv,
+		Logger:         logger,
+		QuizHand:       quizHand,
+		LoginHand:      loginHand,
+		TokenManage:    tokenManager,
+		InventoryHand:  invHand,
+		BalanceHandler: balanceHand,
 	}
 
 	publicMux := http.NewServeMux()
@@ -57,6 +75,13 @@ func New(logger *slog.Logger) (*MainServ, error) {
 	authMux.HandleFunc("GET /api/availibleNotes", mServ.QuizHand.HandleGetAvailibleNotes)
 	authMux.HandleFunc("POST /api/confirm", mServ.QuizHand.HandlePostConfirm)
 	authMux.HandleFunc("GET /api/new-note", mServ.QuizHand.HandleGetNextNote)
+
+	authMux.HandleFunc("GET /api/balance", mServ.BalanceHandler.HandleGetCurrentBalance)
+
+	authMux.HandleFunc("GET /api/num-of-safe-fails", mServ.InventoryHand.HandleGetCurrentBalance)
+	authMux.HandleFunc("POST /api/update-safe-fails", mServ.InventoryHand.HandlePostUpdateNumOfSafeFails)
+	authMux.HandleFunc("POST /api/buy-note-help", mServ.InventoryHand.HandlePostHelpWithNote)
+	authMux.HandleFunc("POST /api/buy-octave-help", mServ.InventoryHand.HandlePostHelpWithOctave)
 
 	authHanlder := middleware.NewUserContextMiddleware(tokenManager, authMux, logger)
 
