@@ -172,6 +172,8 @@
             <span id="safeFailsDisplay" class="stat-value">0</span>
         </div>
         <button id="btnBuySafeFail" class="buy-btn">Купить безопасную ошибку (10)</button>
+        <button id="btnBuyHelpOctave" class="buy-btn">Купить помощь с номером октавы (15)</button>
+        <button id="btnBuyNotePos" class="buy-btn">Купить помощь с позицией ноты (15)</button>
     </div>
 </div>
 
@@ -191,6 +193,8 @@
     const balanceDisplay = document.getElementById('balanceDisplay');
     const safeFailsDisplay = document.getElementById('safeFailsDisplay');
     const btnBuySafeFail = document.getElementById('btnBuySafeFail');
+    const btnBuyHelpOctave = document.getElementById('btnBuyHelpOctave');
+    const btnBuyNotePos = document.getElementById('btnBuyNotePos');
 
     // Функция для получения значения куки
     function getCookie(name) {
@@ -248,7 +252,7 @@
             noteSelect.value = "";
             octaveSelect.value = "";
             resetConfirmButton();
-            statusMessage.textContent = '';
+            // statusMessage.textContent = '';
             btnNext.disabled = false;
         } catch (error) {
             console.error('Ошибка:', error);
@@ -335,6 +339,11 @@
             await loadStats();
             
             setTimeout(() => resetConfirmButton(), 1000);
+            
+            if (data.correct) {
+                requestNewNote();
+            }
+
         } catch (error) {
             console.error('Ошибка:', error);
             statusMessage.textContent = 'Ошибка проверки';
@@ -369,6 +378,94 @@
             btnBuySafeFail.textContent = 'Купить безопасную ошибку (10)';
         } finally {
             btnBuySafeFail.disabled = false;
+        }
+    });
+
+    btnBuyHelpOctave.addEventListener('click', async () => {
+        btnBuyHelpOctave.disabled = true;
+        btnBuyHelpOctave.textContent = 'Покупка...';
+        
+        try {
+            const response = await fetch('/api/buy-octave-help', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userId.toString(),
+                    currentNote: currentNoteData,
+                    currentOctave: currentOctaveData 
+                 })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка покупки');
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                btnBuyHelpOctave.textContent = 'Куплено!';
+                setTimeout(() => {
+                    btnBuyHelpOctave.textContent = 'Купить помощь с номером октавы (15)';
+                }, 1500);
+                statusMessage.textContent = `Текущая октава - ${data.octave}`;
+            } else {
+                btnBuyHelpOctave.textContent = 'Баланс недостаточен';
+                setTimeout(() => {
+                    btnBuyHelpOctave.textContent = 'Купить помощь с номером октавы (15)';
+                }, 1500);
+            }
+
+            // Перезагружаем статистику, чтобы отобразить новый баланс и количество ошибок
+            await loadStats();
+           
+        } catch (error) {
+            console.error('Ошибка покупки:', error);
+            alert('Не удалось купить безопасную ошибку. Проверьте консоль.');
+            btnBuyHelpOctave.textContent = 'Купить помощь с номером октавы (15)';
+        } finally {
+            btnBuyHelpOctave.disabled = false;
+        }
+    });
+
+    btnBuyNotePos.addEventListener('click', async () => {
+        btnBuyNotePos.disabled = true;
+        btnBuyNotePos.textContent = 'Покупка...';
+        
+        try {
+            const response = await fetch('/api/buy-note-help', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userId.toString(),
+                    currentNote: currentNoteData,
+                    currentOctave: currentOctaveData 
+                 })
+            });
+            
+            if (!response.ok) throw new Error('Ошибка покупки');
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                btnBuyNotePos.textContent = 'Куплено!';
+                setTimeout(() => {
+                    btnBuyNotePos.textContent = 'Купить помощь с позицией ноты (15)';
+                }, 1500);
+                statusMessage.textContent = `Позиция текущей ноты - ${data.pos}`;
+            } else {
+                btnBuyNotePos.textContent = 'Баланс недостаточен';
+                setTimeout(() => {
+                    btnBuyNotePos.textContent = 'Купить помощь с позицией ноты (15)';
+                }, 1500);
+            }
+
+            // Перезагружаем статистику, чтобы отобразить новый баланс и количество ошибок
+            await loadStats();
+           
+        } catch (error) {
+            console.error('Ошибка покупки:', error);
+            alert('Не удалось купить безопасную ошибку. Проверьте консоль.');
+            btnBuyNotePos.textContent = 'Купить помощь с позицией ноты (15)';
+        } finally {
+            btnBuyNotePos.disabled = false;
         }
     });
 

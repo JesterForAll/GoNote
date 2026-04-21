@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/JesterForAll/gonote/internal/balance"
 	"github.com/JesterForAll/gonote/internal/database"
@@ -17,7 +18,18 @@ type Inventory struct {
 	balance *balance.Balance
 }
 
+type HelpOctaveNumber struct {
+	Ok     bool
+	Octave string
+}
+
+type HelpNotePosition struct {
+	Ok  bool
+	Pos string
+}
+
 const costOfFailSafe int = 10
+const costOfHelpers int = 15
 
 func newInventory(logger *slog.Logger, balance *balance.Balance) (*Inventory, error) {
 	db, err := database.New("../../static/inventory.db", logger, database.InventoryDbStruct{})
@@ -168,4 +180,65 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, use
 	}
 
 	return invDB.NumOfSafeFails, nil
+}
+
+func (inv *Inventory) GetHelpWithOctaveNumber(userID int, currOctave string) (*HelpOctaveNumber, error) {
+	currBalance := inv.balance.GetCurrentBalance(userID)
+
+	var helpOctaveNumber HelpOctaveNumber
+
+	if currBalance < costOfHelpers {
+		inv.logger.Info("insufficient balance to buy helper")
+
+		helpOctaveNumber.Ok = false
+
+		return &helpOctaveNumber, nil
+	}
+
+	helpOctaveNumber.Octave = currOctave
+	helpOctaveNumber.Ok = true
+
+	err := inv.balance.UpdateCurrentBalance(userID, -costOfHelpers)
+
+	if err != nil {
+		inv.logger.Error("failed to deduct balance", slog.Any("err", err))
+
+		return nil, err
+	}
+
+	return &helpOctaveNumber, nil
+}
+
+func (inv *Inventory) GetHelpWithNotePosition(userID int, currNote string) (*HelpNotePosition, error) {
+	currBalance := inv.balance.GetCurrentBalance(userID)
+
+	var helpNotePosition HelpNotePosition
+
+	if currBalance < costOfHelpers {
+		inv.logger.Info("insufficient balance to buy helper")
+
+		helpNotePosition.Ok = false
+
+		return &helpNotePosition, nil
+	}
+
+	lestSideNotes := []string{"до#, C#", "до, С", "ми, E", "ре#, D#", "ре, D", "фа, F"}
+
+	helpNotePosition.Pos = "правая часть"
+
+	if slices.Contains(lestSideNotes, currNote) {
+		helpNotePosition.Pos = "левая часть"
+	}
+
+	helpNotePosition.Ok = true
+
+	err := inv.balance.UpdateCurrentBalance(userID, -costOfHelpers)
+
+	if err != nil {
+		inv.logger.Error("failed to deduct balance", slog.Any("err", err))
+
+		return nil, err
+	}
+
+	return &helpNotePosition, nil
 }

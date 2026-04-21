@@ -80,6 +80,8 @@ func New(logger *slog.Logger) (*MainServ, error) {
 
 	authMux.HandleFunc("GET /api/num-of-safe-fails", mServ.InventoryHand.HandleGetCurrentBalance)
 	authMux.HandleFunc("POST /api/update-safe-fails", mServ.InventoryHand.HandlePostUpdateNumOfSafeFails)
+	authMux.HandleFunc("POST /api/buy-note-help", mServ.InventoryHand.HandlePostHelpWithNote)
+	authMux.HandleFunc("POST /api/buy-octave-help", mServ.InventoryHand.HandlePostHelpWithOctave)
 
 	authHanlder := middleware.NewUserContextMiddleware(tokenManager, authMux, logger)
 
