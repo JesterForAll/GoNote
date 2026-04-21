@@ -134,7 +134,7 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 
 	confirm.Accuracy = noteData.Accuracy
 
-	//running a transcation
+	//running a transaction
 	err := transaction.RunMulti(ctx, transaction.MultiConfig{
 		Name:   "process confirmation transaction",
 		Logger: quiz.Logger,

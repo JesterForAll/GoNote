@@ -96,7 +96,7 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFails(userID int, buy bool) (int, er
 	return invDB.NumOfSafeFails, nil
 }
 
-func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, tx *gorm.DB, userID int, buy bool) (int, error) {
+func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, userID int, buy bool) (int, error) {
 
 	var invDB database.InventoryDbStruct
 
@@ -122,14 +122,14 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, tx 
 
 	val := 1
 
-	invDB.NumOfSafeFails += val
-
 	if !buy {
 		val *= -1
 
 		if oldNumOfSafeFails == 0 {
 			return oldNumOfSafeFails, nil
 		}
+
+		invDB.NumOfSafeFails += val
 
 		err := inv.Db.Upsert(&invDB)
 		if err != nil {
@@ -139,10 +139,12 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, tx 
 		}
 	}
 
-	//running a transcation
+	invDB.NumOfSafeFails += val
+
+	//running a transaction
 	if buy {
 		err := transaction.RunMulti(ctx, transaction.MultiConfig{
-			Name:   "buying fail safe transaction",
+			Name:   "buying safe fail transaction",
 			Logger: inv.logger,
 			DBs:    []*database.Database{inv.Db, inv.balance.Db}},
 			func(ctx context.Context, txs ...*gorm.DB) error {

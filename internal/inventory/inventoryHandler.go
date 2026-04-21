@@ -84,7 +84,7 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 		return
 	}
 
-	NumOfSafeFails, err := inventoryHand.Inventory.UpdateCurrentNumOfSafeFails(userId, true)
+	NumOfSafeFails, err := inventoryHand.Inventory.UpdateCurrentNumOfSafeFailsWithTx(r.Context(), userId, true)
 	if err != nil {
 		inventoryHand.logger.Error("error updating number of safe fails", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
