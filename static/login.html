@@ -118,14 +118,28 @@
 
                 if (!response.ok) throw new Error('Ошибка входа');
 
-                if (response.redirected) {
-                    window.location.replace(response.url);
-                    // window.location.href = response.url;
-                } else {
-                    const result = await response.json();
-                    showMessage('Вход выполнен успешно!', 'success');
-                    console.log('Login result:', result);
-                }
+                const result = await response.json();
+                
+                // Сохраняем JWT токен в localStorage
+                localStorage.setItem('jwt_token', result.token);
+                
+                showMessage('Вход выполнен успешно!', 'success');
+                
+                // Загружаем /main с Authorization заголовком и заменяем содержимое
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/main', {
+                            headers: { 'Authorization': 'Bearer ' + result.token }
+                        });
+                        if (!response.ok) throw new Error('Ошибка загрузки главной страницы');
+                        const html = await response.text();
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    } catch (error) {
+                        showMessage('Ошибка: ' + error.message, 'error');
+                    }
+                }, 500);
 
             } catch (error) {
                 showMessage('Ошибка: ' + error.message, 'error');

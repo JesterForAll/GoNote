@@ -7,15 +7,15 @@ import (
 
 	"github.com/JesterForAll/gonote/internal/balance"
 	"github.com/JesterForAll/gonote/internal/inventory"
+	"github.com/JesterForAll/gonote/internal/jwt"
 	"github.com/JesterForAll/gonote/internal/login"
 	"github.com/JesterForAll/gonote/internal/middleware"
 	"github.com/JesterForAll/gonote/internal/quiz"
-	"github.com/JesterForAll/gonote/internal/session"
 )
 
 type MainServ struct {
 	Serv           *http.ServeMux
-	TokenManage    *session.TokenManager
+	JWTManager     *jwt.Manager
 	Logger         *slog.Logger
 	QuizHand       *quiz.QuizHandler
 	LoginHand      *login.LoginHandler
@@ -26,9 +26,9 @@ type MainServ struct {
 func New(logger *slog.Logger) (*MainServ, error) {
 	serv := http.NewServeMux()
 
-	tokenManager := session.NewTokenManager()
+	jwtManager := jwt.NewManager()
 
-	loginHand, err := login.New(logger, tokenManager)
+	loginHand, err := login.New(logger, jwtManager)
 	if err != nil {
 		logger.Error("internal error", slog.Any("err", err))
 		return nil, err
@@ -55,9 +55,9 @@ func New(logger *slog.Logger) (*MainServ, error) {
 	mServ := &MainServ{
 		Serv:           serv,
 		Logger:         logger,
+		JWTManager:     jwtManager,
 		QuizHand:       quizHand,
 		LoginHand:      loginHand,
-		TokenManage:    tokenManager,
 		InventoryHand:  invHand,
 		BalanceHandler: balanceHand,
 	}
@@ -83,7 +83,7 @@ func New(logger *slog.Logger) (*MainServ, error) {
 	authMux.HandleFunc("POST /api/buy-note-help", mServ.InventoryHand.HandlePostHelpWithNote)
 	authMux.HandleFunc("POST /api/buy-octave-help", mServ.InventoryHand.HandlePostHelpWithOctave)
 
-	authHanlder := middleware.NewUserContextMiddleware(tokenManager, authMux, logger)
+	authHanlder := middleware.NewUserContextMiddleware(jwtManager, authMux, logger)
 
 	serv.Handle("/", publicMux)
 	serv.Handle("/api/login/", publicMux)

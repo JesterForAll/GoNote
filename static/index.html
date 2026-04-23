@@ -94,8 +94,8 @@
             padding: 1.5rem;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            min-width: 220px;
-            max-width: 250px;
+            min-width: 380px;
+            max-width: 420px;
         }
 
         .sidebar h2 {
@@ -121,16 +121,29 @@
         }
 
         .buy-btn {
-            width: 100%;
             background-color: #ffc107;
             color: #212529;
             font-weight: bold;
-            margin-top: 15px;
-            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 10px;
+            font-size: 13px;
+            line-height: 1.3;
+            cursor: pointer;
         }
 
         .buy-btn:hover { background-color: #e0a800; }
         .buy-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .buy-btns-group {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+        }
+
+        .buy-btns-group .buy-btn {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -171,9 +184,11 @@
             <span>Безопасные ошибки:</span>
             <span id="safeFailsDisplay" class="stat-value">0</span>
         </div>
-        <button id="btnBuySafeFail" class="buy-btn">Купить безопасную ошибку (10)</button>
-        <button id="btnBuyHelpOctave" class="buy-btn">Купить помощь с номером октавы (15)</button>
-        <button id="btnBuyNotePos" class="buy-btn">Купить помощь с позицией ноты (15)</button>
+        <div class="buy-btns-group">
+            <button id="btnBuySafeFail" class="buy-btn">Купить безопасную ошибку (10)</button>
+            <button id="btnBuyHelpOctave" class="buy-btn">Купить помощь с номером октавы (15)</button>
+            <button id="btnBuyNotePos" class="buy-btn">Купить помощь с позицией ноты (15)</button>
+        </div>
     </div>
 </div>
 
@@ -196,24 +211,28 @@
     const btnBuyHelpOctave = document.getElementById('btnBuyHelpOctave');
     const btnBuyNotePos = document.getElementById('btnBuyNotePos');
 
-    // Функция для получения значения куки
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(':').shift();
+    // Получаем JWT токен из localStorage
+    function getAuthToken() {
+        return localStorage.getItem('jwt_token');
     }
 
-    // Получаем ID пользователя из куки, которую устанавливает сервер при логине
-    const userId = getCookie('user_id');
-
-    if (!userId) {
-        console.error("User ID not found in cookies. Please login.");
-        statusMessage.textContent = "Ошибка: пользователь не авторизован";
+    // Создаем заголовки с Authorization header
+    function authHeaders() {
+        const token = getAuthToken();
+        if (!token) {
+            console.error('No JWT token found. Please login.');
+            window.location.href = '/';
+            return {};
+        }
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     }
 
     async function loadOptions() {
         try {
-            const response = await fetch('/api/availibleNotes', { method: 'GET' });
+            const response = await fetch('/api/availibleNotes', { 
+                method: 'GET',
+                headers: authHeaders()
+            });
             if (!response.ok) throw new Error('Ошибка загрузки опций');
             
             const data = await response.json();
@@ -241,7 +260,10 @@
 
     async function requestNewNote() {
         try {
-            const response = await fetch('/api/new-note', { method: 'GET' });
+            const response = await fetch('/api/new-note', { 
+                method: 'GET',
+                headers: authHeaders()
+            });
             if (!response.ok) throw new Error('Ошибка получения ноты');
             
             const data = await response.json();
@@ -264,9 +286,10 @@
     // Загрузка баланса и безопасных ошибок
     async function loadStats() {
         try {
+            const token = getAuthToken();
             const [balanceRes, safeFailsRes] = await Promise.all([
-                fetch(`/api/balance?user_id=${userId}`),
-                fetch(`/api/num-of-safe-fails?user_id=${userId}`)
+                fetch('/api/balance', { method: 'GET', headers: authHeaders() }),
+                fetch('/api/num-of-safe-fails', { method: 'GET', headers: authHeaders() })
             ]);
             
             if (!balanceRes.ok || !safeFailsRes.ok) throw new Error('Ошибка загрузки статистики');
@@ -315,7 +338,7 @@
         try {
             const response = await fetch('/api/confirm', { 
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ 
                     note: selectedNote, 
                     octave: selectedOctave,
@@ -359,8 +382,8 @@
         try {
             const response = await fetch('/api/update-safe-fails', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId.toString() })
+                headers: authHeaders(),
+                body: JSON.stringify({})
             });
             
             if (!response.ok) throw new Error('Ошибка покупки');
@@ -388,9 +411,8 @@
         try {
             const response = await fetch('/api/buy-octave-help', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ 
-                    user_id: userId.toString(),
                     currentNote: currentNoteData,
                     currentOctave: currentOctaveData 
                  })
@@ -432,9 +454,8 @@
         try {
             const response = await fetch('/api/buy-note-help', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ 
-                    user_id: userId.toString(),
                     currentNote: currentNoteData,
                     currentOctave: currentOctaveData 
                  })
