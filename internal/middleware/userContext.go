@@ -4,56 +4,49 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/JesterForAll/gonote/internal/contextkey"
-	"github.com/JesterForAll/gonote/internal/session"
+	"github.com/JesterForAll/gonote/internal/jwt"
 )
 
 type UserContextMiddleware struct {
-	tokenManager *session.TokenManager
-	next         http.Handler
-	logger       *slog.Logger
+	jwtManager *jwt.Manager
+	next       http.Handler
+	logger     *slog.Logger
 }
 
-func NewUserContextMiddleware(tokenManager *session.TokenManager, next http.Handler, logger *slog.Logger) *UserContextMiddleware {
+func NewUserContextMiddleware(jwtManager *jwt.Manager, next http.Handler, logger *slog.Logger) *UserContextMiddleware {
 	return &UserContextMiddleware{
-		tokenManager: tokenManager,
-		next:         next,
-		logger:       logger,
+		jwtManager: jwtManager,
+		next:       next,
+		logger:     logger,
 	}
 }
 
 func (m *UserContextMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("user_id")
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		m.logger.Error("No Authorization header")
+		http.Error(w, "Unauthorized: missing authorization header", http.StatusUnauthorized)
+
+		return
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		m.logger.Error("Invalid authorization header format")
+		http.Error(w, "Unauthorized: invalid authorization format", http.StatusUnauthorized)
+
+		return
+	}
+
+	tokenString := parts[1]
+
+	userID, err := m.jwtManager.ParseToken(tokenString)
 	if err != nil {
-		m.logger.Error("No coockie availible")
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-
-		return
-	}
-
-	parts := strings.SplitN(cookie.Value, ":", 2)
-	if len(parts) != 2 {
-		m.logger.Error("Invalid cookie format")
-		http.Error(w, "Invalid cookie format", http.StatusBadRequest)
-
-		return
-	}
-
-	currentToken := m.tokenManager.GetToken()
-	if parts[1] != currentToken {
-		m.logger.Error("Session expired")
-		http.Error(w, "Session expired", http.StatusUnauthorized)
-
-		return
-	}
-
-	userID, err := strconv.Atoi(parts[0])
-	if err != nil {
-		m.logger.Error("Invalid user ID")
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		m.logger.Error("Invalid or expired JWT token", slog.Any("err", err))
+		http.Error(w, "Unauthorized: invalid or expired token", http.StatusUnauthorized)
 
 		return
 	}

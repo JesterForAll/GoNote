@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
+
+	"github.com/JesterForAll/gonote/internal/utils"
 )
 
 type BalanceHandler struct {
@@ -28,18 +29,11 @@ func New(logger *slog.Logger) (*BalanceHandler, error) {
 }
 
 func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter, r *http.Request) {
-	userIdStr := r.URL.Query().Get("user_id")
 
-	if userIdStr == "" {
-		balanceHand.logger.Error("user_id is missing")
-		http.Error(w, "Missing user_id", http.StatusBadRequest)
-		return
-	}
-
-	userId, err := strconv.Atoi(userIdStr)
+	userId, err := utils.GetUserIDFromContext(r.Context(), balanceHand.logger)
 	if err != nil {
-		balanceHand.logger.Error("invalid user_id", slog.Any("err", err))
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
+		balanceHand.logger.Error("user_id is missing or invalid")
+		http.Error(w, "Missing user_id", http.StatusBadRequest)
 		return
 	}
 

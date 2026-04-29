@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/JesterForAll/gonote/internal/balance"
+	"github.com/JesterForAll/gonote/internal/utils"
 )
 
 type InventoryHandler struct {
@@ -18,12 +18,7 @@ type responceNumOfSafeFails struct {
 	NumOfSafeFails int
 }
 
-type reqUserID struct {
-	UserID string `json:"user_id"`
-}
-
 type helpRequest struct {
-	UserID        string `json:"user_id"`
 	CurrentNote   string `json:"currentNote"`
 	CurrentOctave string `json:"currentOctave"`
 }
@@ -50,18 +45,11 @@ func New(logger *slog.Logger, balance *balance.Balance) (*InventoryHandler, erro
 }
 
 func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWriter, r *http.Request) {
-	userIdStr := r.URL.Query().Get("user_id")
 
-	if userIdStr == "" {
-		inventoryHand.logger.Error("user_id is missing")
-		http.Error(w, "Missing user_id", http.StatusBadRequest)
-		return
-	}
-
-	userId, err := strconv.Atoi(userIdStr)
+	userId, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
-		inventoryHand.logger.Error("invalid user_id", slog.Any("err", err))
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
+		inventoryHand.logger.Error("user_id is missing or invalid")
+		http.Error(w, "Missing user_id", http.StatusBadRequest)
 		return
 	}
 
@@ -83,20 +71,11 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 }
 
 func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.ResponseWriter, r *http.Request) {
-	var reqUserID reqUserID
 
-	err := json.NewDecoder(r.Body).Decode(&reqUserID)
+	userId, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
-		inventoryHand.logger.Error("error decoding create user request", slog.Any("err", err))
-		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
-
-		return
-	}
-
-	userId, err := strconv.Atoi(reqUserID.UserID)
-	if err != nil {
-		inventoryHand.logger.Error("invalid user_id", slog.Any("err", err))
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
+		inventoryHand.logger.Error("user_id is missing or invalid")
+		http.Error(w, "Missing user_id", http.StatusBadRequest)
 		return
 	}
 
@@ -123,24 +102,24 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 }
 
 func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseWriter, r *http.Request) {
-	var helpRequest helpRequest
+	var req helpRequest
 
-	err := json.NewDecoder(r.Body).Decode(&helpRequest)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		inventoryHand.logger.Error("error decoding create user request", slog.Any("err", err))
+		inventoryHand.logger.Error("error decoding request body", slog.Any("err", err))
 		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
 
 		return
 	}
 
-	userID, err := strconv.Atoi(helpRequest.UserID)
+	userID, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
-		inventoryHand.logger.Error("invalid user_id", slog.Any("err", err))
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
+		inventoryHand.logger.Error("user_id is missing or invalid")
+		http.Error(w, "Missing user_id", http.StatusBadRequest)
 		return
 	}
 
-	helpOctaveNumber, err := inventoryHand.Inventory.GetHelpWithOctaveNumber(userID, helpRequest.CurrentOctave)
+	helpOctaveNumber, err := inventoryHand.Inventory.GetHelpWithOctaveNumber(userID, req.CurrentOctave)
 	if err != nil {
 		inventoryHand.logger.Error("error getting help with octave", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -163,24 +142,24 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 }
 
 func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWriter, r *http.Request) {
-	var helpRequest helpRequest
+	var req helpRequest
 
-	err := json.NewDecoder(r.Body).Decode(&helpRequest)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		inventoryHand.logger.Error("error decoding create user request", slog.Any("err", err))
+		inventoryHand.logger.Error("error decoding request body", slog.Any("err", err))
 		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
 
 		return
 	}
 
-	userID, err := strconv.Atoi(helpRequest.UserID)
+	userID, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
-		inventoryHand.logger.Error("invalid user_id", slog.Any("err", err))
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
+		inventoryHand.logger.Error("user_id is missing or invalid")
+		http.Error(w, "Missing user_id", http.StatusBadRequest)
 		return
 	}
 
-	helpNotePos, err := inventoryHand.Inventory.GetHelpWithNotePosition(userID, helpRequest.CurrentNote)
+	helpNotePos, err := inventoryHand.Inventory.GetHelpWithNotePosition(userID, req.CurrentNote)
 	if err != nil {
 		inventoryHand.logger.Error("error getting help with note", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

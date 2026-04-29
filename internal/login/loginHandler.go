@@ -7,13 +7,13 @@ import (
 	"strconv"
 
 	"github.com/JesterForAll/gonote/internal/database"
-	"github.com/JesterForAll/gonote/internal/session"
+	"github.com/JesterForAll/gonote/internal/jwt"
 )
 
 type LoginHandler struct {
-	loginStruct  *loginStruct
-	logger       *slog.Logger
-	tokenManager *session.TokenManager
+	loginStruct *loginStruct
+	logger      *slog.Logger
+	jwtManager  *jwt.Manager
 }
 
 type createUserRequest struct {
@@ -29,7 +29,12 @@ type userID struct {
 	ID string `json:"id"`
 }
 
-func New(logger *slog.Logger, tokenManager *session.TokenManager) (*LoginHandler, error) {
+type loginResponse struct {
+	Token     string `json:"token"`
+	ExpiresAt int64  `json:"expires_at"`
+}
+
+func New(logger *slog.Logger, jwtManager *jwt.Manager) (*LoginHandler, error) {
 	loginStruct, err := newLogin(logger)
 	if err != nil {
 		logger.Error("failed create login struct", slog.Any("err", err))
@@ -37,7 +42,7 @@ func New(logger *slog.Logger, tokenManager *session.TokenManager) (*LoginHandler
 		return nil, err
 	}
 
-	return &LoginHandler{loginStruct: loginStruct, logger: logger, tokenManager: tokenManager}, nil
+	return &LoginHandler{loginStruct: loginStruct, logger: logger, jwtManager: jwtManager}, nil
 }
 
 func (loginHand *LoginHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -129,19 +134,20 @@ func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	cookieVal := strconv.Itoa(int(userDB.ID)) + ":" + loginHand.tokenManager.GetToken()
+	tokenString, err := loginHand.jwtManager.GenerateToken(int(userDB.ID))
+	if err != nil {
+		loginHand.logger.Error("error generating JWT token", slog.Any("err", err))
+		http.Error(w, "Internal server error while generating token", http.StatusInternalServerError)
 
-	cookie := &http.Cookie{
-		Name:     "user_id",
-		Value:    cookieVal,
-		Path:     "/",
-		HttpOnly: false,
-		MaxAge:   86400,
+		return
 	}
-	http.SetCookie(w, cookie)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(loginResponse{
+		Token:     tokenString,
+		ExpiresAt: 24 * 60 * 60,
+	})
 
 	loginHand.logger.Info("user logined", "user_name", userDB.UserName, "user id", userDB.ID)
-
-	http.Redirect(w, r, "/main", http.StatusSeeOther)
-
 }

@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/JesterForAll/gonote/internal/balance"
-	"github.com/JesterForAll/gonote/internal/contextkey"
 	"github.com/JesterForAll/gonote/internal/database"
 	"github.com/JesterForAll/gonote/internal/inventory"
 	"github.com/JesterForAll/gonote/internal/transaction"
+	"github.com/JesterForAll/gonote/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -81,10 +81,15 @@ func (quiz *Quiz) getRandomNote() *note {
 }
 
 func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confirmRequest) (*confirm, error) {
+
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
-	userID := ctx.Value(contextkey.GetUserIDKey()).(int)
+	userID, err := utils.GetUserIDFromContext(ctx, quiz.Logger)
+	if err != nil {
+		quiz.Logger.Error("error getting user ID from context", slog.Any("err", err))
+		return nil, err
+	}
 
 	exist := quiz.DB.CheckIfExistAndGetFirst(map[string]interface{}{
 		"note":    confirmRequest.CurrentNote,
@@ -135,7 +140,7 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 	confirm.Accuracy = noteData.Accuracy
 
 	//running a transaction
-	err := transaction.RunMulti(ctx, transaction.MultiConfig{
+	err = transaction.RunMulti(ctx, transaction.MultiConfig{
 		Name:   "process confirmation transaction",
 		Logger: quiz.Logger,
 		DBs:    []*database.Database{quiz.DB, quiz.balance.Db}},
