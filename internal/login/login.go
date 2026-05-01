@@ -31,12 +31,17 @@ func (login *loginStruct) createUser(name string) error {
 	exist := login.DB.CheckIfExistAndGetFirst(map[string]interface{}{"user_name": name}, &nameData)
 
 	if exist {
-		return errors.New("This user is already exist")
+		return errors.New("this user is already exist")
 	}
 
 	nameData.UserName = name
 
-	login.DB.Upsert(&nameData)
+	err := login.DB.Upsert(&nameData)
+	if err != nil {
+		login.logger.Error("error creating user", slog.Any("err", err))
+
+		return err
+	}
 
 	return nil
 }

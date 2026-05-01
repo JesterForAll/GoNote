@@ -101,7 +101,13 @@ func (loginHand *LoginHandler) HandleGetUsers(w http.ResponseWriter, _ *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		loginHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		return
+	}
 }
 
 func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -144,10 +150,17 @@ func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(loginResponse{
+
+	err = json.NewEncoder(w).Encode(loginResponse{
 		Token:     tokenString,
 		ExpiresAt: 24 * 60 * 60,
 	})
+	if err != nil {
+		loginHand.logger.Error("error encoding login response", slog.Any("err", err))
+		http.Error(w, "Internal server encoding login response", http.StatusInternalServerError)
+
+		return
+	}
 
 	loginHand.logger.Info("user logined", "user_name", userDB.UserName, "user id", userDB.ID)
 }

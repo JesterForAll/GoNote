@@ -33,7 +33,7 @@ var listNotes = availibleNotes{
 }
 
 type QuizHandler struct {
-	Logger *slog.Logger
+	logger *slog.Logger
 	Quiz   *Quiz
 }
 
@@ -52,14 +52,14 @@ func New(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inventory
 		return nil, err
 	}
 
-	return &QuizHandler{Logger: logger, Quiz: quiz}, nil
+	return &QuizHandler{logger: logger, Quiz: quiz}, nil
 }
 
 func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *http.Request) {
 
 	data, err := json.Marshal(listNotes)
 	if err != nil {
-		quizHand.Logger.Error("error encoding data", slog.Any("err", err))
+		quizHand.logger.Error("error encoding data", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding data", http.StatusInternalServerError)
 
 		return
@@ -68,7 +68,12 @@ func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *h
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		quizHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 }
 
@@ -80,18 +85,23 @@ func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Re
 
 	data, err := json.Marshal(noteForSrv)
 	if err != nil {
-		quizHand.Logger.Error("error encoding response", slog.Any("err", err))
+		quizHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
 
 		return
 	}
 
-	quizHand.Logger.Info("Отправлен ответ: \n", "data", data)
+	quizHand.logger.Info("Отправлен ответ: \n", "data", data)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		quizHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 }
 
@@ -101,17 +111,17 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 
 	err := json.NewDecoder(r.Body).Decode(&confirmRequest)
 	if err != nil {
-		quizHand.Logger.Error("error decoding request", slog.Any("err", err))
+		quizHand.logger.Error("error decoding request", slog.Any("err", err))
 		http.Error(w, "Bad request, error while decoding body", http.StatusBadRequest)
 
 		return
 	}
 
-	quizHand.Logger.Info("got input\n", "confirmRequest", confirmRequest)
+	quizHand.logger.Info("got input\n", "confirmRequest", confirmRequest)
 
 	confirm, err := quizHand.Quiz.processConfirmation(r.Context(), &confirmRequest)
 	if err != nil {
-		quizHand.Logger.Error("error saving to database", slog.Any("err", err))
+		quizHand.logger.Error("error saving to database", slog.Any("err", err))
 		http.Error(w, "internal server error while saving to database", http.StatusInternalServerError)
 
 		return
@@ -121,17 +131,22 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 
 	data, err := json.Marshal(confRes)
 	if err != nil {
-		quizHand.Logger.Error("error encoding response", slog.Any("err", err))
+		quizHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error while encoding response", http.StatusInternalServerError)
 
 		return
 	}
 
-	quizHand.Logger.Info("response\n", "data", data)
+	quizHand.logger.Info("response\n", "data", data)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		quizHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 }

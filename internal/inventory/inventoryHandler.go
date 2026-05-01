@@ -67,7 +67,12 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +103,12 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +148,12 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWriter, r *http.Request) {
@@ -178,5 +193,10 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWri
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }

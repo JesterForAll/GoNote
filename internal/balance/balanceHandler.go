@@ -51,5 +51,10 @@ func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		balanceHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }

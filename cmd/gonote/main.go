@@ -2,15 +2,26 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/JesterForAll/gonote/internal/server"
+	"github.com/JesterForAll/gonote/internal/version"
 )
 
 func main() {
+
+	showVersion := flag.Bool("version", false, "print version and build info")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("Version: %s\nBuild Date: %s\n", version.Version, version.BuildDate)
+		os.Exit(0)
+	}
+
 	slogger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(slogger)
 
