@@ -14,6 +14,7 @@ import (
 
 func main() {
 	showVersion := flag.Bool("version", false, "print version and build info")
+
 	flag.Parse()
 
 	if *showVersion {

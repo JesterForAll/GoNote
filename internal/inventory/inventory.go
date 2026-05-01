@@ -76,7 +76,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFails(userID int, buy bool) (int, er
 		}
 
 		err := inv.balance.UpdateCurrentBalance(userID, -costOfFailSafe)
-
 		if err != nil {
 			inv.logger.Error("failed to deduct balance", slog.Any("err", err))
 
@@ -165,7 +164,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, use
 
 				return nil
 			})
-
 		if err != nil {
 			inv.logger.Error("error during buying fail safe transaction", slog.Any("err", err))
 
@@ -193,7 +191,6 @@ func (inv *Inventory) GetHelpWithOctaveNumber(userID int, currOctave string) (*H
 	helpOctaveNumber.Ok = true
 
 	err := inv.balance.UpdateCurrentBalance(userID, -costOfHelpers)
-
 	if err != nil {
 		inv.logger.Error("failed to deduct balance", slog.Any("err", err))
 
@@ -227,7 +224,6 @@ func (inv *Inventory) GetHelpWithNotePosition(userID int, currNote string) (*Hel
 	helpNotePosition.Ok = true
 
 	err := inv.balance.UpdateCurrentBalance(userID, -costOfHelpers)
-
 	if err != nil {
 		inv.logger.Error("failed to deduct balance", slog.Any("err", err))
 

@@ -32,6 +32,7 @@ func RunMulti(ctx context.Context, cfg MultiConfig, fn MultiFunc) error {
 
 			return fmt.Errorf("failed to begin transaction on db %d: %w", i, err)
 		}
+
 		txs = append(txs, tx)
 	}
 

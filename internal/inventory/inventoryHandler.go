@@ -49,6 +49,7 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")
 		http.Error(w, "Missing user_id", http.StatusBadRequest)
+
 		return
 	}
 
@@ -60,6 +61,7 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 	if err != nil {
 		inventoryHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -70,6 +72,7 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 	if err != nil {
 		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -79,6 +82,7 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")
 		http.Error(w, "Missing user_id", http.StatusBadRequest)
+
 		return
 	}
 
@@ -86,6 +90,7 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 	if err != nil {
 		inventoryHand.logger.Error("error updating number of safe fails", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -95,6 +100,7 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 	if err != nil {
 		inventoryHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -105,6 +111,7 @@ func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.Res
 	if err != nil {
 		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -124,6 +131,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")
 		http.Error(w, "Missing user_id", http.StatusBadRequest)
+
 		return
 	}
 
@@ -131,6 +139,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 	if err != nil {
 		inventoryHand.logger.Error("error getting help with octave", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -140,6 +149,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 	if err != nil {
 		inventoryHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -150,6 +160,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithOctave(w http.ResponseW
 	if err != nil {
 		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -169,6 +180,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWri
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")
 		http.Error(w, "Missing user_id", http.StatusBadRequest)
+
 		return
 	}
 
@@ -176,6 +188,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWri
 	if err != nil {
 		inventoryHand.logger.Error("error getting help with note", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -185,6 +198,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWri
 	if err != nil {
 		inventoryHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -195,6 +209,7 @@ func (inventoryHand *InventoryHandler) HandlePostHelpWithNote(w http.ResponseWri
 	if err != nil {
 		inventoryHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }

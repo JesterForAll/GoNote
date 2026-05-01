@@ -25,6 +25,7 @@ linters:
     - whitespace
     - unused
     - usestdlibvars
+    - wsl_v5
   settings:
     depguard:
       rules:

@@ -14,6 +14,7 @@ func GetUserIDFromContext(ctx context.Context, logger *slog.Logger) (int, error)
 		logger.Error("userID not found in context")
 		return 0, strconv.ErrSyntax
 	}
+
 	switch v := val.(type) {
 	case int:
 		return v, nil

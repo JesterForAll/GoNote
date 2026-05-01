@@ -33,6 +33,7 @@ func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter
 	if err != nil {
 		balanceHand.logger.Error("user_id is missing or invalid")
 		http.Error(w, "Missing user_id", http.StatusBadRequest)
+
 		return
 	}
 
@@ -44,6 +45,7 @@ func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter
 	if err != nil {
 		balanceHand.logger.Error("error encoding response", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -54,6 +56,7 @@ func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter
 	if err != nil {
 		balanceHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }

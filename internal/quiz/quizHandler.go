@@ -70,6 +70,7 @@ func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *h
 	if err != nil {
 		quizHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -96,6 +97,7 @@ func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Re
 	if err != nil {
 		quizHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -140,6 +142,7 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		quizHand.logger.Error("error writing data", slog.Any("err", err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
 		return
 	}
 }

@@ -81,8 +81,10 @@ func (quiz *Quiz) getRandomNote() *note {
 }
 
 func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confirmRequest) (*confirm, error) {
-	var confirm confirm
-	var noteData database.AccuracyDbStruct
+	var (
+		confirm  confirm
+		noteData database.AccuracyDbStruct
+	)
 
 	userID, err := utils.GetUserIDFromContext(ctx, quiz.Logger)
 	if err != nil {
@@ -121,7 +123,6 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 	// we have safe fail, we need to change number of safe fails and return data, but dont change accuracy and num tries
 	if numOfSafeFails > 0 && !confirm.Correct {
 		_, err := quiz.inventory.UpdateCurrentNumOfSafeFails(userID, false)
-
 		if err != nil {
 			quiz.Logger.Error("error updating number of safe fails", slog.Any("err", err))
 
@@ -154,7 +155,6 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 
 			return nil
 		})
-
 	if err != nil {
 		return nil, err
 	}
