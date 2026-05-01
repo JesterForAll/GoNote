@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/JesterForAll/gonote/internal/database"
 	"gorm.io/gorm"
+
+	"github.com/JesterForAll/gonote/internal/database"
 )
 
 type MultiFunc func(ctx context.Context, txs ...*gorm.DB) error
@@ -18,7 +19,6 @@ type MultiConfig struct {
 }
 
 func RunMulti(ctx context.Context, cfg MultiConfig, fn MultiFunc) error {
-
 	var txs []*gorm.DB
 
 	for i, db := range cfg.DBs {
@@ -32,6 +32,7 @@ func RunMulti(ctx context.Context, cfg MultiConfig, fn MultiFunc) error {
 
 			return fmt.Errorf("failed to begin transaction on db %d: %w", i, err)
 		}
+
 		txs = append(txs, tx)
 	}
 

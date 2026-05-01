@@ -46,7 +46,6 @@ func New(logger *slog.Logger, jwtManager *jwt.Manager) (*LoginHandler, error) {
 }
 
 func (loginHand *LoginHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
-
 	var createUserRequest createUserRequest
 
 	err := json.NewDecoder(r.Body).Decode(&createUserRequest)
@@ -57,7 +56,7 @@ func (loginHand *LoginHandler) HandleCreateUser(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	loginHand.logger.Info("got input\n", "createUserRequest", createUserRequest)
+	loginHand.logger.Info("got input\n", "create_user_request", createUserRequest)
 
 	err = loginHand.loginStruct.createUser(createUserRequest.Name)
 	if err != nil {
@@ -69,11 +68,9 @@ func (loginHand *LoginHandler) HandleCreateUser(w http.ResponseWriter, r *http.R
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
 }
 
 func (loginHand *LoginHandler) HandleGetUsers(w http.ResponseWriter, _ *http.Request) {
-
 	usersListDB, err := loginHand.loginStruct.getUsers()
 	if err != nil {
 		loginHand.logger.Error("error getting users from database", slog.Any("err", err))
@@ -101,11 +98,16 @@ func (loginHand *LoginHandler) HandleGetUsers(w http.ResponseWriter, _ *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		loginHand.logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		return
+	}
 }
 
 func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
-
 	var userID userID
 
 	err := json.NewDecoder(r.Body).Decode(&userID)
@@ -144,10 +146,17 @@ func (loginHand *LoginHandler) HandleLogin(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(loginResponse{
+
+	err = json.NewEncoder(w).Encode(loginResponse{
 		Token:     tokenString,
 		ExpiresAt: 24 * 60 * 60,
 	})
+	if err != nil {
+		loginHand.logger.Error("error encoding login response", slog.Any("err", err))
+		http.Error(w, "Internal server encoding login response", http.StatusInternalServerError)
+
+		return
+	}
 
 	loginHand.logger.Info("user logined", "user_name", userDB.UserName, "user id", userDB.ID)
 }
