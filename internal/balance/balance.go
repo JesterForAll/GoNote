@@ -3,8 +3,9 @@ package balance
 import (
 	"log/slog"
 
-	"github.com/JesterForAll/gonote/internal/database"
 	"gorm.io/gorm"
+
+	"github.com/JesterForAll/gonote/internal/database"
 )
 
 type Balance struct {
@@ -26,7 +27,6 @@ func newBalance(logger *slog.Logger) (*Balance, error) {
 }
 
 func (balance *Balance) GetCurrentBalance(userID int) int {
-
 	var balanceDB database.BalanceDbStruct
 
 	exist := balance.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &balanceDB)
@@ -39,7 +39,6 @@ func (balance *Balance) GetCurrentBalance(userID int) int {
 }
 
 func (balance *Balance) UpdateCurrentBalance(userID int, val int) error {
-
 	var balanceDB database.BalanceDbStruct
 
 	exist := balance.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &balanceDB)
@@ -65,7 +64,6 @@ func (balance *Balance) UpdateCurrentBalance(userID int, val int) error {
 }
 
 func (balance *Balance) UpdateCurrentBalanceWithTx(tx *gorm.DB, userID int, val int) error {
-
 	var balanceDB database.BalanceDbStruct
 
 	exist := balance.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &balanceDB)

@@ -39,7 +39,6 @@ type YamlStruct struct {
 }
 
 func ParseConfig() (*Config, error) {
-
 	cfg := DefaultConfig()
 
 	_ = godotenv.Load()

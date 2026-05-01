@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/JesterForAll/gonote/internal/balance"
 	"github.com/JesterForAll/gonote/internal/database"
 	"github.com/JesterForAll/gonote/internal/inventory"
 	"github.com/JesterForAll/gonote/internal/transaction"
 	"github.com/JesterForAll/gonote/internal/utils"
-	"gorm.io/gorm"
 )
 
 type Quiz struct {
@@ -28,7 +29,7 @@ type Quiz struct {
 type note struct {
 	Note     string
 	Octave   string
-	AudioUrl string
+	AudioURL string
 }
 
 type confirm struct {
@@ -56,7 +57,6 @@ func newQuiz(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inven
 }
 
 func (quiz *Quiz) getRandomNote() *note {
-
 	newR := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randNote := quiz.fileList[newR.Intn(len(quiz.fileList))]
 
@@ -75,13 +75,12 @@ func (quiz *Quiz) getRandomNote() *note {
 		note.Note = strings.TrimSpace(randNote.Name()[indxEnd+2 : indxDot])
 	}
 
-	note.AudioUrl = randNote.Name()
+	note.AudioURL = randNote.Name()
 
 	return &note
 }
 
 func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confirmRequest) (*confirm, error) {
-
 	var confirm confirm
 	var noteData database.AccuracyDbStruct
 
@@ -119,7 +118,7 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 
 	numOfSafeFails := quiz.inventory.GetCurrentNumOfSafeFails(userID)
 
-	//we have safe fail, we need to change number of safe fails and return data, but dont change accuracy and num tries
+	// we have safe fail, we need to change number of safe fails and return data, but dont change accuracy and num tries
 	if numOfSafeFails > 0 && !confirm.Correct {
 		_, err := quiz.inventory.UpdateCurrentNumOfSafeFails(userID, false)
 
@@ -139,13 +138,12 @@ func (quiz *Quiz) processConfirmation(ctx context.Context, confirmRequest *confi
 
 	confirm.Accuracy = noteData.Accuracy
 
-	//running a transaction
+	// running a transaction
 	err = transaction.RunMulti(ctx, transaction.MultiConfig{
 		Name:   "process confirmation transaction",
 		Logger: quiz.Logger,
 		DBs:    []*database.Database{quiz.DB, quiz.balance.Db}},
 		func(ctx context.Context, txs ...*gorm.DB) error {
-
 			if err := quiz.DB.UpsertWithTx(txs[0], &noteData); err != nil {
 				return fmt.Errorf("error upserting note data: %w", err)
 			}

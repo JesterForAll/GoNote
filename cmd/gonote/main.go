@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	showVersion := flag.Bool("version", false, "print version and build info")
 	flag.Parse()
 
@@ -43,8 +42,8 @@ func main() {
 
 	port := config.Port
 
-	slogger.Info("нужно набрать очков для победы", slog.Int("ScoreToWin", config.ScoreToWin))
-	slogger.Info("текущая сложность", "Difficulty", slog.Any("Difficulty", config.Difficulty))
+	slogger.Info("нужно набрать очков для победы", slog.Int("score_to_win", config.ScoreToWin))
+	slogger.Info("текущая сложность", "difficulty", slog.Any("Difficulty", config.Difficulty))
 
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), mServ.Serv)
 	if err != nil {

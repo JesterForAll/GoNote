@@ -6,10 +6,11 @@ import (
 	"log/slog"
 	"slices"
 
+	"gorm.io/gorm"
+
 	"github.com/JesterForAll/gonote/internal/balance"
 	"github.com/JesterForAll/gonote/internal/database"
 	"github.com/JesterForAll/gonote/internal/transaction"
-	"gorm.io/gorm"
 )
 
 type Inventory struct {
@@ -43,7 +44,6 @@ func newInventory(logger *slog.Logger, balance *balance.Balance) (*Inventory, er
 }
 
 func (inv *Inventory) GetCurrentNumOfSafeFails(userID int) int {
-
 	var invDB database.InventoryDbStruct
 
 	exist := inv.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &invDB)
@@ -56,7 +56,6 @@ func (inv *Inventory) GetCurrentNumOfSafeFails(userID int) int {
 }
 
 func (inv *Inventory) UpdateCurrentNumOfSafeFails(userID int, buy bool) (int, error) {
-
 	var invDB database.InventoryDbStruct
 
 	exist := inv.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &invDB)
@@ -68,7 +67,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFails(userID int, buy bool) (int, er
 	oldNumOfSafeFails := invDB.NumOfSafeFails
 
 	if buy {
-
 		currBalance := inv.balance.GetCurrentBalance(userID)
 
 		if currBalance < costOfFailSafe {
@@ -109,7 +107,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFails(userID int, buy bool) (int, er
 }
 
 func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, userID int, buy bool) (int, error) {
-
 	var invDB database.InventoryDbStruct
 
 	exist := inv.Db.CheckIfExistAndGetFirst(map[string]interface{}{"user_id": userID}, &invDB)
@@ -121,7 +118,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, use
 	oldNumOfSafeFails := invDB.NumOfSafeFails
 
 	if buy {
-
 		currBalance := inv.balance.GetCurrentBalance(userID)
 
 		if currBalance < costOfFailSafe {
@@ -129,7 +125,6 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, use
 
 			return oldNumOfSafeFails, nil
 		}
-
 	}
 
 	val := 1
@@ -153,14 +148,13 @@ func (inv *Inventory) UpdateCurrentNumOfSafeFailsWithTx(ctx context.Context, use
 
 	invDB.NumOfSafeFails += val
 
-	//running a transaction
+	// running a transaction
 	if buy {
 		err := transaction.RunMulti(ctx, transaction.MultiConfig{
 			Name:   "buying safe fail transaction",
 			Logger: inv.logger,
 			DBs:    []*database.Database{inv.Db, inv.balance.Db}},
 			func(ctx context.Context, txs ...*gorm.DB) error {
-
 				if err := inv.Db.UpsertWithTx(txs[0], &invDB); err != nil {
 					return fmt.Errorf("error updating inventory: %w", err)
 				}

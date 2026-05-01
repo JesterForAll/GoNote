@@ -40,11 +40,10 @@ type QuizHandler struct {
 type noteResponce struct {
 	Note     string `json:"note"`
 	Octave   string `json:"octave"`
-	AudioUrl string `json:"audioUrl"`
+	AudioURL string `json:"audioUrl"`
 }
 
 func New(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inventory) (*QuizHandler, error) {
-
 	quiz, err := newQuiz(logger, balance, inv)
 	if err != nil {
 		logger.Error("failed create quiz", slog.Any("err", err))
@@ -56,7 +55,6 @@ func New(logger *slog.Logger, balance *balance.Balance, inv *inventory.Inventory
 }
 
 func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *http.Request) {
-
 	data, err := json.Marshal(listNotes)
 	if err != nil {
 		quizHand.logger.Error("error encoding data", slog.Any("err", err))
@@ -74,14 +72,12 @@ func (quizHand *QuizHandler) HandleGetAvailibleNotes(w http.ResponseWriter, _ *h
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Request) {
-
 	note := quizHand.Quiz.getRandomNote()
 
-	noteForSrv := noteResponce{Note: note.Note, Octave: note.Octave, AudioUrl: note.AudioUrl}
+	noteForSrv := noteResponce{Note: note.Note, Octave: note.Octave, AudioURL: note.AudioURL}
 
 	data, err := json.Marshal(noteForSrv)
 	if err != nil {
@@ -102,11 +98,9 @@ func (quizHand *QuizHandler) HandleGetNextNote(w http.ResponseWriter, _ *http.Re
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Request) {
-
 	var confirmRequest confirmRequest
 
 	err := json.NewDecoder(r.Body).Decode(&confirmRequest)
@@ -117,7 +111,7 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	quizHand.logger.Info("got input\n", "confirmRequest", confirmRequest)
+	quizHand.logger.Info("got input\n", "confirm_request", confirmRequest)
 
 	confirm, err := quizHand.Quiz.processConfirmation(r.Context(), &confirmRequest)
 	if err != nil {
@@ -148,5 +142,4 @@ func (quizHand *QuizHandler) HandlePostConfirm(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 }

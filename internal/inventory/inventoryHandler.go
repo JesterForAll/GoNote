@@ -15,7 +15,7 @@ type InventoryHandler struct {
 }
 
 type responceNumOfSafeFails struct {
-	NumOfSafeFails int
+	NumOfSafeFails int `json:"NumOfSafeFails"`
 }
 
 type helpRequest struct {
@@ -45,7 +45,6 @@ func New(logger *slog.Logger, balance *balance.Balance) (*InventoryHandler, erro
 }
 
 func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWriter, r *http.Request) {
-
 	userId, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")
@@ -76,7 +75,6 @@ func (inventoryHand *InventoryHandler) HandleGetCurrentBalance(w http.ResponseWr
 }
 
 func (inventoryHand *InventoryHandler) HandlePostUpdateNumOfSafeFails(w http.ResponseWriter, r *http.Request) {
-
 	userId, err := utils.GetUserIDFromContext(r.Context(), inventoryHand.logger)
 	if err != nil {
 		inventoryHand.logger.Error("user_id is missing or invalid")

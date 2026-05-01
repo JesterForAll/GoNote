@@ -29,7 +29,6 @@ func New(logger *slog.Logger) (*BalanceHandler, error) {
 }
 
 func (balanceHand *BalanceHandler) HandleGetCurrentBalance(w http.ResponseWriter, r *http.Request) {
-
 	userId, err := utils.GetUserIDFromContext(r.Context(), balanceHand.logger)
 	if err != nil {
 		balanceHand.logger.Error("user_id is missing or invalid")

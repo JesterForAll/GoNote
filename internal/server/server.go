@@ -96,7 +96,6 @@ func New(logger *slog.Logger) (*MainServ, error) {
 }
 
 func (mServ *MainServ) handleGetRoot(w http.ResponseWriter, _ *http.Request) {
-
 	data, err := os.ReadFile("../../static/login.html")
 
 	if err != nil {
@@ -115,11 +114,9 @@ func (mServ *MainServ) handleGetRoot(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
-
 	data, err := os.ReadFile("../../static/index.html")
 
 	if err != nil {
@@ -138,5 +135,4 @@ func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 }

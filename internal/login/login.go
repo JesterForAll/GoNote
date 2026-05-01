@@ -13,7 +13,6 @@ type loginStruct struct {
 }
 
 func newLogin(logger *slog.Logger) (*loginStruct, error) {
-
 	db, err := database.New("../../static/login.db", logger, &database.LoginDBStruct{})
 	if err != nil {
 		logger.Error("failed to connect database", slog.Any("err", err))
@@ -25,7 +24,6 @@ func newLogin(logger *slog.Logger) (*loginStruct, error) {
 }
 
 func (login *loginStruct) createUser(name string) error {
-
 	var nameData database.LoginDBStruct
 
 	exist := login.DB.CheckIfExistAndGetFirst(map[string]interface{}{"user_name": name}, &nameData)
@@ -47,7 +45,6 @@ func (login *loginStruct) createUser(name string) error {
 }
 
 func (login *loginStruct) getUsers() (*[]database.LoginDBStruct, error) {
-
 	var usersList []database.LoginDBStruct
 
 	err := login.DB.GetAll(&usersList)
