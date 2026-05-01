@@ -18,7 +18,7 @@ tidy:
 	go mod tidy
 
 lint: tidy
-	golangci-lint run
+	golangci-lint run --fix
 
 test: lint
 	go test ./... -race -cover
