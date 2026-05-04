@@ -71,11 +71,6 @@ linters:
         - time
       # Enforce putting arguments on separate lines.
       args-on-sep-lines: false
-    staticcheck:
-      checks:
-        - all
-        - '-ST1003' # waiting for package name will be fixed (underscores)
-        - '-QF1008' # not need to fix; we understand how to call nested structs
     revive:
       rules:
         - name: var-naming # waiting for package name will be fixed (incorrect naming)
@@ -106,17 +101,7 @@ linters:
         text: don't use an underscore in package name
       - path: (.+)\.go$
         text: 'exported: .*'
-      - linters:
-          - staticcheck
-        path: hooks/purge_orphan_resources.go
-        text: 'is deprecated: use Warn instead'
-      - linters:
-          - staticcheck
-        path: hooks/purge_orphan_resources.go
-        text: 'is deprecated: use Info instead'
     paths:
-      - go_lib/dependency/k8s/drain
-      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
       - third_party$
       - builtin$
       - examples$
@@ -140,8 +125,6 @@ formatters:
   exclusions:
     generated: lax
     paths:
-      - go_lib/dependency/k8s/drain
-      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
       - third_party$
       - builtin$
       - examples$
