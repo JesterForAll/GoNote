@@ -36,6 +36,7 @@ func (m *Manager) GenerateToken(userID int) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	return token.SignedString(m.secret)
 }
 
@@ -62,5 +63,6 @@ func (m *Manager) ParseToken(tokenString string) (int, error) {
 func generateRandomSecret() []byte {
 	b := make([]byte, 32)
 	rand.Read(b)
+
 	return b
 }

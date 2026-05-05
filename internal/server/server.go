@@ -96,9 +96,7 @@ func New(logger *slog.Logger) (*MainServ, error) {
 }
 
 func (mServ *MainServ) handleGetRoot(w http.ResponseWriter, _ *http.Request) {
-
 	data, err := os.ReadFile("../../static/login.html")
-
 	if err != nil {
 		mServ.Logger.Error("error reading main page", slog.Any("err", err))
 		http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
@@ -109,14 +107,17 @@ func (mServ *MainServ) handleGetRoot(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		mServ.Logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 
+		return
+	}
 }
 
 func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
-
 	data, err := os.ReadFile("../../static/index.html")
-
 	if err != nil {
 		mServ.Logger.Error("error reading main page", slog.Any("err", err))
 		http.Error(w, "Internal server error while reading main page", http.StatusInternalServerError)
@@ -127,6 +128,11 @@ func (mServ *MainServ) handleGetMain(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		mServ.Logger.Error("error writing data", slog.Any("err", err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 
+		return
+	}
 }
